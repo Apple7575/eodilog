@@ -1,0 +1,68 @@
+[project]
+name = "eodilog-ai"
+version = "0.1.0"
+description = "어디로그 AI 서버"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "httpx>=0.28.1",
+    "beautifulsoup4>=4.15.0",
+    "pillow>=13.0.0",
+    "pillow-heif>=1.8.1",
+    "python-multipart>=0.0.33",
+    "numpy>=2.4.6",
+]
+
+[project.optional-dependencies]
+vision = [
+    "open-clip-torch>=3.3.0",
+    "torch>=2.15.0",
+    "torchvision>=0.29.2",
+    "transformers>=5.22.1",
+]
+
+# 배포 서버(EC2 c6g)에 GPU가 없어 CUDA 패키지를 받지 않는다
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=1.4.1.post1",
+    "respx>=0.23.1",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+# FastAPI 의존성 주입은 Depends()를 기본값으로 쓰는 것이 관례다
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# 한국어 프롬프트 문자열은 줄을 나누면 LLM에 그대로 전달된다
+"app/features/*/service.py" = ["E501"]
+# 캡처 평가 세트 생성기: HTML 목업 문자열과 이미지별 데이터를 한 줄에 둔다
+"scripts/make_captures.py" = ["E501"]
+# H200 학습 실험 스크립트: 서버에서 돌린 그대로 보관한다(서비스 코드 아님)
+"scripts/h200/*" = ["E501", "E402", "B905"]
+# 폰 안 사진 AI 학습·변환 스크립트: 서버에서 돌린 그대로 보관한다(서비스 코드 아님)
+"scripts/ondevice/*" = ["E501", "E402", "B905", "E702"]

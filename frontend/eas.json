@@ -1,0 +1,40 @@
+{
+  "cli": {
+    "version": ">= 25.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://k15a204.p.ssafy.io",
+        "EXPO_PUBLIC_INVITE_URL": "https://k15a204.p.ssafy.io/invite/",
+        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://k15a204.p.ssafy.io/oauth/kakao"
+      }
+    },
+    "mock": {
+      "extends": "preview",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_APP_ENV": "development",
+        "EXPO_PUBLIC_DEV_MOCK": "true",
+        "EXPO_PUBLIC_API_BASE_URL": "http://localhost:8080"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://k15a204.p.ssafy.io",
+        "EXPO_PUBLIC_INVITE_URL": "https://k15a204.p.ssafy.io/invite/",
+        "EXPO_PUBLIC_KAKAO_REDIRECT_URI": "https://k15a204.p.ssafy.io/oauth/kakao"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

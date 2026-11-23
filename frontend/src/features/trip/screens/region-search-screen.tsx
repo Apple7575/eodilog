@@ -1,0 +1,199 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { FlashList } from '@shopify/flash-list';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Button, Chip, EmptyState, ErrorState, Header, Icon } from '@/components/ui';
+import { KeyboardLift } from '@/components/ui/keyboard-lift';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { caret, colors, layout, radius, spacing, typography } from '@/theme';
+
+import { useNewTripDraft } from '../hooks/use-new-trip-draft';
+import { primeRegion } from '../hooks/use-region-names';
+import { useRegionSearch } from '../hooks/use-region-search';
+import { useTripEditDraft } from '../hooks/use-trip-edit-draft';
+import { shortRegionName } from '../trip-rules';
+import type { Region } from '../types';
+
+/**
+ * 여행지 검색. S16 "어디로" 줄(draft 'new')과 S19 여행지 줄(draft 'edit')에서 연다.
+ * 코스·투표에서 여는 여행지 고르기(TripRegionScreen)는 onDone으로 바로 저장한다.
+ * 여러 곳을 고를 수 있고 같은 곳은 한 번만 들어간다.
+ * 두 입력 스토어를 언제나 둘 다 부르고 값으로 고른다. 훅을 조건에 따라 부르지 않기 위해서다
+ */
+export function RegionSearchScreen({
+  draft = 'new',
+  onDone,
+  busy = false,
+}: {
+  draft?: 'new' | 'edit';
+  /** 아래 버튼을 눌렀을 때. 없으면 뒤로만 간다(고른 값은 입력 스토어에 남는다) */
+  onDone?: () => void;
+  /** onDone이 저장하는 중 */
+  busy?: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+  const [input, setInput] = useState('');
+  const newDraft = useNewTripDraft();
+  const editDraft = useTripEditDraft();
+  const { regions: picked, addRegion, removeRegion } = draft === 'edit' ? editDraft : newDraft;
+  const { regions, query, isFetching, isError, refetch, hasNextPage, fetchNextPage } =
+    useRegionSearch(input);
+
+  const pick = (region: Region) => {
+    primeRegion(queryClient, region);
+    addRegion(region);
+  };
+
+  return (
+    <View style={styles.screen}>
+      <Header title="여행지" />
+      <View style={styles.searchBox}>
+        <Icon name="search" size={20} color={colors.text.muted} />
+        <TextInput
+          {...caret}
+          autoFocus
+          value={input}
+          onChangeText={setInput}
+          placeholder="강릉, 해운대처럼 지역 이름"
+          placeholderTextColor={colors.text.muted}
+          returnKeyType="search"
+          style={styles.input}
+          accessibilityLabel="여행지 검색"
+        />
+      </View>
+
+      {picked.length > 0 ? (
+        <View style={styles.picked}>
+          {picked.map((r) => (
+            <Chip
+              key={r.id}
+              label={`${shortRegionName(r.name)} ✕`}
+              selected
+              onPress={() => removeRegion(r.id)}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      {/* 자판이 올라오면 목록과 아래 버튼을 함께 올린다. 화면 끝까지 그리는 안드로이드에서는 화면이 줄지 않아
+          자판이 [N곳 고르기]·[완료]를 가렸다(S16 새 여행 화면과 같은 방식) */}
+      <KeyboardLift style={styles.flex}>
+        <View style={styles.list}>
+          {query.length === 0 ? (
+            <View style={styles.notice}>
+              <EmptyState
+                icon="map-pin"
+                title="어디로 떠날까요?"
+                description={'시·군·구 이름으로 찾아요\n장소는 여행을 만든 뒤 코스에서 넣어요'}
+              />
+            </View>
+          ) : isError ? (
+            <View style={styles.notice}>
+              <ErrorState onRetry={() => refetch()} />
+            </View>
+          ) : !isFetching && regions.length === 0 ? (
+            <View style={styles.notice}>
+              <EmptyState
+                icon="search"
+                title="찾는 지역이 없어요"
+                // 장소 이름(성산일출봉 등)을 치면 여기로 온다. 지역 목록은 시·군·구 245곳뿐이라는 것을 알려 준다
+                // (2026-11-13 사용자 결정: 장소로 찾아 지역을 알려 주는 기능은 시연 뒤로)
+                description={'장소 이름 말고 지역 이름으로 찾아 주세요\n예) 성산일출봉 → 서귀포'}
+              />
+            </View>
+          ) : (
+            <FlashList
+              data={regions}
+              keyExtractor={(r) => r.id}
+              keyboardShouldPersistTaps="handled"
+              onEndReached={() => hasNextPage && fetchNextPage()}
+              renderItem={({ item }) => {
+                const selected = picked.some((p) => p.id === item.id);
+                return (
+                  <PressableScale
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => (selected ? removeRegion(item.id) : pick(item))}
+                    style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+                  >
+                    <Icon name="map-pin" size={20} color={colors.text.sub} />
+                    <View style={styles.rowText}>
+                      <Text style={[typography.bodyMedium, styles.name]}>
+                        {shortRegionName(item.name)}
+                      </Text>
+                      <Text style={[typography.caption, styles.full]}>{item.name}</Text>
+                    </View>
+                    {selected ? <Icon name="check" size={20} color={colors.brand.primary} /> : null}
+                  </PressableScale>
+                );
+              }}
+            />
+          )}
+        </View>
+
+        {/* 안드로이드 하단 버튼 줄(내비게이션 바) 높이에 16을 더 띄운다. 바 높이만 주면 버튼이 바에 붙는다 */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing[16] }]}>
+          <Button
+            label={picked.length > 0 ? `${picked.length}곳 고르기` : '완료'}
+            icon="check"
+            size="xl"
+            block
+            loading={busy}
+            onPress={onDone ?? (() => router.back())}
+          />
+        </View>
+      </KeyboardLift>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.surface.white },
+  flex: { flex: 1 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[8],
+    marginHorizontal: layout.screenPaddingX,
+    paddingHorizontal: spacing[12],
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface.default,
+  },
+  // lineHeight를 주면 안드로이드에서 글자 위아래가 잘린다(TextField와 같은 이유)
+  input: {
+    flex: 1,
+    fontFamily: typography.body.fontFamily,
+    fontSize: typography.body.fontSize,
+    color: colors.text.default,
+    paddingVertical: 0,
+    // 글꼴 여유 공간을 빼고 세로 가운데. 검색칸(48) 안에 맞게 들어간다(TextField와 같은 이유)
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  picked: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing[8],
+    paddingHorizontal: layout.screenPaddingX,
+    paddingTop: spacing[12],
+  },
+  list: { flex: 1, marginTop: spacing[8] },
+  notice: { height: 300 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[12],
+    paddingHorizontal: layout.screenPaddingX,
+    minHeight: 60,
+  },
+  pressed: { backgroundColor: colors.surface.subtle },
+  rowText: { flex: 1 },
+  name: { color: colors.text.default },
+  full: { color: colors.text.muted },
+  footer: { paddingHorizontal: layout.screenPaddingX, paddingTop: spacing[16] },
+});

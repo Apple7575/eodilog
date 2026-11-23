@@ -1,0 +1,63 @@
+import { apiClient } from '@/api/client';
+import { publicClient } from '@/api/session';
+import type { DataResponse, MyProfile, Session } from '@/api/types';
+
+import type { OAuthAuthorization, OAuthExchange } from './types';
+
+/** 카카오 로그인 시작. 서버가 카카오 로그인 주소와 state를 준다 */
+export async function requestKakaoAuthorization(body: {
+  redirectUri: string;
+  codeChallenge: string;
+}): Promise<OAuthAuthorization> {
+  const { data } = await publicClient.post<DataResponse<OAuthAuthorization>>(
+    '/auth/oauth/KAKAO/authorization-requests',
+    body,
+  );
+  return data.data;
+}
+
+/** 카카오가 돌려준 code를 우리 서비스 토큰으로 바꾼다. 한 번만 쓸 수 있다 */
+export async function exchangeKakaoCode(body: OAuthExchange): Promise<Session> {
+  const { data } = await publicClient.post<DataResponse<Session>>(
+    '/auth/oauth/KAKAO/sessions',
+    body,
+  );
+  return data.data;
+}
+
+export async function getMe(): Promise<MyProfile> {
+  const { data } = await apiClient.get<DataResponse<MyProfile>>('/me');
+  return data.data;
+}
+
+/** PATCH /me 본문. 보낸 칸만 바뀐다. ageBand·profileImageAssetId의 null은 지우기 */
+export type ProfilePatch = {
+  nickname?: string;
+  ageBand?: string | null;
+  /** 내가 올려 완료 확인까지 끝낸 PROFILE 파일 ID. 아니면 400 INVALID_PROFILE_IMAGE */
+  profileImageAssetId?: string | null;
+  accountVisibility?: 'PUBLIC' | 'PRIVATE';
+};
+
+/**
+ * 내 프로필을 고친다. 닉네임(앞뒤 공백을 뺀 1~50자)을 보내면 가입 대기 사용자는 가입이 끝난다.
+ * 가입 대기 토큰으로도 부를 수 있고, 성공하면 같은 토큰으로 바로 서비스를 쓸 수 있다.
+ * 빈 본문과 서버가 모르는 칸은 400이다
+ */
+export async function updateProfile(patch: ProfilePatch): Promise<MyProfile> {
+  const { data } = await apiClient.patch<DataResponse<MyProfile>>('/me', patch);
+  return data.data;
+}
+
+/**
+ * 회원 탈퇴(DELETE /me, 202). 즉시 탈퇴하고 되돌릴 수 없다. 모든 기기의 세션이 끊기고,
+ * 남는 여행 기록의 작성자는 "탈퇴한 사용자"로 보인다. 나머지 정리는 서버가 뒤에서 한다
+ */
+export async function deleteAccount(): Promise<void> {
+  await apiClient.delete('/me');
+}
+
+/** 현재 기기의 서버 세션만 끊는다. 다른 기기 로그인은 남는다 */
+export async function deleteCurrentSession(): Promise<void> {
+  await apiClient.delete('/auth/session', { timeout: 5_000 });
+}

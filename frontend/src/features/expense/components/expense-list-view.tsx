@@ -1,0 +1,184 @@
+import { SCROLL_DECELERATION } from '@/theme/scroll';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Button, Card, CenterNotice, Header, Icon } from '@/components/ui';
+import { FadeIn } from '@/components/ui/fade-in';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { formatTotalShort, formatWon } from '@/lib/format-number';
+import { colors, layout, spacing, typography } from '@/theme';
+
+import {
+  addedAfterSettlement,
+  changedAfterSettlement,
+  payerLabel,
+  splitLabel,
+} from '../expense-rules';
+import type { Expense, SettlementState, TripMember } from '../types';
+
+import { ExpenseRow } from './expense-row';
+import { SettlementChangedBox } from './settlement-changed-box';
+
+export type ExpenseListViewProps = {
+  tripTitle: string;
+  members: TripMember[];
+  myMemberId: string | null;
+  expenses: Expense[];
+  settlement: SettlementState | undefined;
+  onAdd: () => void;
+  onOpen: (expense: Expense) => void;
+  /** [정산 계산]·[다시 계산] → S36 */
+  onCalculate: () => void;
+  /** [이전 정산 보기] → S36 재계산 필요 */
+  onPreviousSettlement: () => void;
+};
+
+/**
+ * S35 경비 목록. 상태: 기본 / 지출 없음 / 정산 후 지출 변경.
+ * 목록에는 합계와 지출 줄만 둔다. 1명당 금액·사람별 낸 돈은 S36에만(디자인 결정 S35·S36).
+ */
+export function ExpenseListView({
+  tripTitle,
+  members,
+  myMemberId,
+  expenses,
+  settlement,
+  onAdd,
+  onOpen,
+  onCalculate,
+  onPreviousSettlement,
+}: ExpenseListViewProps) {
+  const insets = useSafeAreaInsets();
+  const changed = changedAfterSettlement(settlement);
+  const total = expenses.reduce((sum, e) => sum + e.amountMinor, 0);
+  const nameOf = (memberId: string) =>
+    members.find((m) => m.id === memberId)?.user.nickname ?? '알 수 없음';
+
+  return (
+    <View style={styles.screen}>
+      <Header
+        title="경비"
+        subtitle={tripTitle}
+        subtitleIcon="trip"
+        // 지출이 없을 때는 가운데 [지출 추가]가 있어 위 +를 숨긴다(2026-11-15 사용자 지적: + 두 개). 지출이 생기면 위 +만 남는다
+        right={
+          expenses.length === 0 ? undefined : (
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="지출 추가"
+              hitSlop={8}
+              onPress={onAdd}
+              style={styles.headerButton}
+            >
+              <Icon name="plus" color={colors.text.default} />
+            </PressableScale>
+          )
+        }
+      />
+
+      {expenses.length === 0 ? (
+        // README 가운데 안내 화면(좌우 36, 제목 위 20). 공통 EmptyState는 좌우 20이라 CenterNotice를 쓴다
+        <CenterNotice
+          icon="card"
+          title="아직 입력한 지출이 없어요"
+          description="함께 쓴 돈을 넣으면 나눠 계산해요"
+          actionLabel="지출 추가"
+          actionIcon="plus"
+          onAction={onAdd}
+        />
+      ) : (
+        <>
+          <FlatList
+            decelerationRate={SCROLL_DECELERATION}
+            data={expenses}
+            keyExtractor={(e) => e.id}
+            contentContainerStyle={styles.content}
+            ItemSeparatorComponent={RowGap}
+            ListHeaderComponent={
+              <View style={styles.top}>
+                {changed ? <SettlementChangedBox onPrevious={onPreviousSettlement} /> : null}
+                <Card variant="filled" rounded="xl" style={styles.total}>
+                  <Text style={[typography.captionMedium, styles.onBrandSoft]}>함께 쓴 돈</Text>
+                  <Text style={[typography.display, styles.onBrand]}>
+                    {changed ? formatWon(total) : formatTotalShort(total)}
+                  </Text>
+                </Card>
+                <Text style={[typography.title3, styles.text, styles.listTitle]}>
+                  지출 {expenses.length}건
+                </Text>
+              </View>
+            }
+            renderItem={({ item, index }) => {
+              const payerName = nameOf(item.payerMemberId);
+              return (
+                <FadeIn index={index}>
+                  <ExpenseRow
+                    title={item.title}
+                    amount={item.amountMinor}
+                    payerName={payerName}
+                    payerIsMe={item.payerMemberId === myMemberId}
+                    payerText={payerLabel(payerName)}
+                    splitText={splitLabel(item.participantMemberIds, members)}
+                    addedAfterSettlement={addedAfterSettlement(item.id, settlement)}
+                    onPress={() => onOpen(item)}
+                  />
+                </FadeIn>
+              );
+            }}
+          />
+          {/* 안드로이드 하단 버튼 줄(내비게이션 바) 높이만 주면 버튼이 바에 붙는다. 바 위로 16을 더 띄우고, 바가 없을 때는 원래 최소 여백을 쓴다 */}
+          <View
+            style={[
+              styles.bottom,
+              { paddingBottom: Math.max(insets.bottom + spacing[16], BOTTOM_GAP) },
+            ]}
+          >
+            <Button
+              label={changed ? '다시 계산' : '정산 계산'}
+              icon={changed ? 'refresh' : 'calculator'}
+              weight="medium"
+              onPress={onCalculate}
+              style={styles.calculate}
+            />
+          </View>
+        </>
+      )}
+    </View>
+  );
+}
+
+/** 아래 버튼 밑 여백(Figma 34). 기기 아래 안전 영역이 더 크면 그만큼 */
+const BOTTOM_GAP = 34;
+
+function RowGap() {
+  return <View style={styles.rowGap} />;
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.surface.white },
+  headerButton: {
+    width: layout.minTouchTarget,
+    height: layout.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: { paddingHorizontal: layout.screenPaddingX, paddingTop: spacing[16] },
+  top: { gap: spacing[20] },
+  // 합계 상자 안쪽 여백 20, 글자 사이는 붙여 둔다
+  // 합계는 파랑 카드에 큰 숫자로. 이 화면에서 가장 먼저 읽히는 값이다
+  total: { padding: spacing[20], gap: spacing[2], backgroundColor: colors.brand.primary },
+  onBrand: { color: colors.text.inverse },
+  onBrandSoft: { color: colors.onBrand.textSoft },
+  // 합계 상자와 목록 제목 사이 24(top의 gap 20 + 4), 제목과 목록 사이 8
+  listTitle: { marginTop: spacing[4], marginBottom: spacing[8] },
+  rowGap: { height: spacing[6] },
+  bottom: {
+    alignItems: 'flex-end',
+    paddingHorizontal: layout.screenPaddingX,
+    paddingTop: spacing[12],
+  },
+  // 아이콘만 있는 동그란 버튼이라 좌우 여백을 따로 주지 않는다. 글자 버튼 때 여백(20·24)이 남아 아이콘이 왼쪽으로 밀렸다
+  calculate: { alignSelf: 'flex-end' },
+  text: { color: colors.text.default },
+  sub: { color: colors.text.icon },
+});

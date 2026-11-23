@@ -1,0 +1,20 @@
+package com.ssafy.a204.EodiLog.job;
+
+import tools.jackson.databind.JsonNode;
+
+public interface JobHandler {
+    JobKind kind();
+    /** Validate the kind-specific input allowlist before any insert. */
+    void validate(JobSubmission submission);
+    /**
+     * Runs outside a database transaction. Do not perform domain completion writes here.
+     * Return {@code JobOutcome.failed(TEMPORARY_FAILURE)} for transient errors; any thrown exception is a permanent EXECUTION_FAILED.
+     */
+    JobOutcome execute(JobContext context) throws Exception;
+    /**
+     * Runs only while holding the fenced job row lock, in the result transaction. No external I/O.
+     * A thrown exception rolls back the result together with the domain writes, and the whole job (execute included)
+     * is retried as TEMPORARY_FAILURE within max-attempts, so the hook must be idempotent for the same jobId.
+     */
+    void complete(JobContext context, JsonNode result);
+}

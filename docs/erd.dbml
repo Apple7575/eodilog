@@ -1,0 +1,871 @@
+// 어디로그 논리 ERD v0.4 / 2026-10-27 / 설계 제안
+// 기준: PRD v0.6·2026-10-27 사용자 요청·open-decisions와 최신 user-flow. C-1~C-51 원문 미확보.
+// API 계약·D-N 제안·미정 Q-N은 docs/api-spec.md에 함께 관리한다.
+// DB 엔진: PostgreSQL + PostGIS (docs/decisions/0001-database.md). uuid/json/timestamp는 논리 타입이며 물리 설계 때 uuid/jsonb/timestamptz로 매핑한다.
+// 이 파일은 실행용 DDL이나 완료된 마이그레이션이 아니다.
+// DBML 문법: https://dbml.dbdiagram.io/docs/
+
+Project eodilogue {
+  Note: '''
+  여행은 그룹 경계. trips.owner_user_id가 방장 기준이며 이탈 시 가입 순서로 양도한다.
+  단방향 follows: PUBLIC 즉시 ACCEPTED, PRIVATE 요청 수락 후 ACCEPTED. 반대 방향 독립. 공개 전환 시 대기 요청 자동 수락(Q-2, 2026-11-10).
+  공동 피드는 명시적 게시 때 여행당 하나 생성, 멤버 누구나 삭제. 특정 친구 본인 경로 숨김은 별도 저장한다.
+  게시 후 기본 전체 공개, 직접 공동 피드 경로는 특정 친구 숨김으로 차단하지 않는다. 비공개 계정 결합 Q-3.
+  개인별 피드·사진 공개 동의·코스 승인·정산 완료·1:1 채팅은 제거한다.
+  투표는 시각 마감 자동 확정, 동률 최다 모두. 진행 중 후보 추가. 0표는 확정 없이 마감.
+  단일 코스·구간별 수단·모든 멤버 AI 적용. 버전 검사, 실시간 전송/알림 묶음 Q-15·16.
+  KRW 정수·1인 부담액 10원 올림. 여행 합산 후 1회 올림·차액은 원금 기준 최대 수령자(Q-10 확정). 송금액 자체의 재올림 없음.
+  이탈 멤버십·공동 피드·경비 보존, 경비는 등록자만 수정/삭제. 삭제/익명화 Q-11.
+  논리 타입이며 DB 엔진은 PostgreSQL(ADR-0001). cascade 삭제 일괄 적용 금지, timestamp UTC.
+  '''
+}
+
+Table users {
+  id uuid [pk]
+  nickname varchar(50) [not null]
+  profile_completed boolean [not null, default: false, note: 'false이면 nickname은 빈 문자열. 유효 카카오 닉네임 또는 PATCH /me로 완료. 재로그인은 이름 유지']
+  account_visibility varchar(16) [not null, default: 'PRIVATE', note: 'PUBLIC/PRIVATE. PRIVATE→PUBLIC 전환 시 받은 REQUESTED를 모두 ACCEPTED(알림 없음), PUBLIC→PRIVATE는 기존 관계 유지(Q-2 2026-11-10). 기본값 PRIVATE']
+  profile_asset_id uuid [ref: > assets.id, note: '본인 소유 READY PROFILE 파일만 지정(PATCH /me). FK NOT VALID. 응답 URL은 /assets/{id}/download']
+  age_band varchar(32) [note: 'TEENS/TWENTIES/THIRTIES/FORTIES/FIFTIES/SIXTIES_PLUS 또는 NULL(CHECK, Q-1 2026-11-10). 선택 항목, 본인 응답에만']
+  age_use_consent boolean [not null, default: false]
+  inference_consent boolean [not null, default: false]
+  preference_sharing_scope varchar(32) [not null, default: 'NONE', note: 'EXPLICIT_ONLY/EXPLICIT_AND_INFERRED/NONE. D-17 전역 기본']
+  status varchar(16) [not null, default: 'ACTIVE', note: 'ACTIVE/DEACTIVATED']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  deactivated_at timestamp
+  Note: '닉네임 검색은 lower(nickname) gin_trgm_ops 부분 인덱스(status=ACTIVE AND profile_completed)'
+}
+
+Table oauth_accounts {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  provider varchar(16) [not null, note: 'KAKAO/NAVER']
+  provider_user_id varchar(255) [not null]
+  created_at timestamp [not null]
+  indexes {
+    (provider, provider_user_id) [unique]
+    user_id
+  }
+  Note: '이메일 동일성을 계정 연결 근거로 사용하지 않는 D-2 제안. 제공자 원문 access token을 이 테이블에 저장하지 않음.'
+}
+
+Table sessions {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  refresh_token_hash varchar(255) [not null, unique]
+  rotated_from_id uuid [ref: > sessions.id]
+  expires_at timestamp [not null]
+  revoked_at timestamp
+  created_at timestamp [not null]
+  indexes { user_id }
+}
+
+Table oauth_attempts {
+  id uuid [pk]
+  provider varchar(16) [not null, note: 'KAKAO/NAVER']
+  state_hash varchar(255) [not null, unique]
+  initiator_context_hash varchar(255) [not null, note: 'Expo 앱 verifier의 S256 challenge. verifier 원문은 앱만 보관']
+  redirect_uri varchar(500) [not null]
+  code_challenge varchar(43) [not null, note: 'S256, base64url without padding']
+  expires_at timestamp [not null]
+  consumed_at timestamp
+  created_at timestamp [not null]
+  Note: '현재 KAKAO Expo 외부 브라우저 인가 코드 흐름. provider/state/redirect/만료/S256 verifier 검증과 일회성 소비를 원자적으로 처리. 실패한 외부 교환도 소비 유지. 웹 쿠키·NAVER는 후속.'
+}
+
+Table follows {
+  id uuid [pk]
+  follower_user_id uuid [not null, ref: > users.id]
+  followee_user_id uuid [not null, ref: > users.id]
+  status varchar(16) [not null, note: 'REQUESTED/ACCEPTED']
+  requested_at timestamp [not null]
+  accepted_at timestamp
+  indexes {
+    (follower_user_id, followee_user_id) [unique]
+    (followee_user_id, status)
+  }
+  Note: '자기 자신 금지(CHECK). status=ACCEPTED일 때만 accepted_at(CHECK). 대상 PUBLIC이면 즉시 ACCEPTED, PRIVATE면 REQUESTED 후 대상자 수락. 반대 방향 독립. 언팔로우/취소/거절/팔로워 제거는 해당 방향만 제거. 공개 전환 시 대기 요청 자동 수락, 비공개 전환은 유지(Q-2 2026-11-10).'
+}
+
+Table suggestion_dismissals {
+  user_id uuid [not null, ref: > users.id]
+  candidate_user_id uuid [not null, ref: > users.id]
+  created_at timestamp [not null]
+  indexes { (user_id, candidate_user_id) [pk] }
+  Note: '추천 숨김은 영구 유지하며 다시 추천하지 않음. 자기 자신 금지(CHECK). 검색/팔로우 자체 차단과 별개.'
+}
+
+Table user_preferences {
+  user_id uuid [not null, ref: > users.id]
+  preference_key varchar(64) [not null]
+  source varchar(16) [not null, note: 'EXPLICIT/INFERRED']
+  value varchar(255) [not null]
+  updated_at timestamp [not null]
+  indexes { (user_id, preference_key, source) [pk] }
+  Note: '카테고리·가중치·추론 동의는 Q-5. INFERRED는 서버만 작성한다. 키당 source별 단일 값 제안.'
+}
+
+Table trips {
+  id uuid [pk]
+  owner_user_id uuid [not null, ref: > users.id]
+  title varchar(200) [not null]
+  start_date date
+  end_date date
+  status varchar(16) [not null, default: 'PLANNING', note: 'PLANNING/ONGOING/COMPLETED']
+  currency varchar(3) [not null, default: 'KRW', note: 'KRW만, 통화 변경 불가']
+  version bigint [not null, default: 1]
+  expense_version bigint [not null, default: 0]
+  current_settlement_id uuid [ref: > settlements.id]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  deleted_at timestamp
+  Note: 'owner는 반드시 같은 여행 ACTIVE 멤버여야 함. 생성 시 trip·owner 멤버십·여행 채팅방·빈 단일 코스(version=1)을 한 트랜잭션으로 생성. 마지막 방장 이탈은 여행 삭제와 동일. 삭제는 deleted_at 논리 삭제(즉시 404) + TRIP_DELETE 작업의 하위 행 물리 삭제이며 이 행은 tombstone으로 남긴다(2026-11-03, S15P31A204-167). 피드는 게시 때만 생성. 상태는 기간으로 자동 전환, 시간대/경계 Q-4. 통화는 KRW 고정.'
+}
+
+Table trip_members {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  user_id uuid [not null, ref: > users.id]
+  status varchar(16) [not null, default: 'ACTIVE', note: 'ACTIVE/LEFT/REMOVED']
+  join_order bigint [not null, note: '여행별 서버 발급 순번. 방장 자동 양도 기준']
+  joined_at timestamp [not null]
+  left_at timestamp
+  preference_scope varchar(32) [not null, default: 'INHERIT', note: 'INHERIT/EXPLICIT_ONLY/EXPLICIT_AND_INFERRED/NONE. D-17 override']
+  indexes {
+    (trip_id, user_id) [unique]
+    (trip_id, join_order) [unique]
+    (user_id, status)
+    (trip_id, status, join_order)
+  }
+  Note: '경비 FK 때문에 이탈 시 물리 삭제하지 않음. 재참여는 기존 멤버십 ID를 유지하고 join_order를 새로 부여하는 제안. role 중복 저장 없이 trips.owner_user_id로 계산.'
+}
+
+Table trip_invitations {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  created_by_member_id uuid [not null, ref: > trip_members.id]
+  token_hash varchar(255) [not null, unique]
+  expires_at timestamp [not null]
+  revoked_at timestamp [note: '새 링크 발급 시 같은 여행의 이전 링크에 채움. 여행당 쓸 수 있는 링크 하나']
+  created_at timestamp [not null]
+  indexes { trip_id }
+  Note: '토큰 원문은 생성 응답에서만 반환. 초대 코드 없음. 친구/팔로우 관계 없이 유효 링크로 참여. 현재 ACTIVE 초대자·만료·정원 검사. 만료 7일, 정원은 여행당 ACTIVE 멤버 20명(Q-4, 2026-10-30).'
+}
+
+Table trip_friend_invitations {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  inviter_member_id uuid [not null, ref: > trip_members.id]
+  invitee_user_id uuid [not null, ref: > users.id]
+  status varchar(16) [not null, note: 'PENDING|ACCEPTED|DECLINED|CANCELED. 기간 지난 PENDING은 응답에서 EXPIRED로 계산']
+  expires_at timestamp [not null]
+  created_at timestamp [not null]
+  responded_at timestamp [note: 'PENDING이 아니면 채움']
+  indexes {
+    (trip_id, invitee_user_id) [unique, note: 'status=PENDING 부분 유니크. 여행·사람마다 대기 초대 하나']
+    (invitee_user_id, status, created_at)
+    inviter_member_id
+  }
+  Note: '맞팔 친구 앱 내 초대(2026-11-17). 두 방향 팔로우가 모두 ACCEPTED일 때만 보낸다(수락 시 재확인 없음). 받은 사람이 수락하면 링크 수락과 같은 참여 처리. 만료 7일, 초대한 멤버가 나가면 수락 불가. 링크 초대와 서로 영향 없음.'
+}
+
+Table regions {
+  id uuid [pk]
+  code varchar(100) [not null, unique]
+  name varchar(200) [not null]
+  parent_id uuid [ref: > regions.id]
+  latitude decimal(10,7)
+  longitude decimal(10,7)
+  Note: '행정/관광 지역 코드 체계는 Q-8. 이름만으로 지역 동일성을 판단하지 않음.'
+}
+
+Table places {
+  id uuid [pk]
+  region_id uuid [ref: > regions.id]
+  name varchar(255) [not null]
+  address varchar(500)
+  latitude decimal(10,7) [not null]
+  longitude decimal(10,7) [not null]
+  provider varchar(32)
+  provider_place_id varchar(255)
+  source varchar(16) [not null, note: 'PROVIDER/MANUAL']
+  category varchar(200) [note: '공급자 분류 이름을 >로 이은 값(SBDC 업종 대>중>소, KTO 관광 타입). 날씨 대안 실내 판단용 AI 입력에만 쓰고 공개 Place에는 없음. 모르면 null(S15P31A204-247)']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  indexes {
+    (provider, provider_place_id) [unique]
+    region_id
+    (longitude, latitude) [name: 'idx_places_location', note: 'GiST geography 식 인덱스. 날씨 대안 후보 반경 검색']
+  }
+  Note: 'provider 두 필드는 함께 NULL 또는 함께 NOT NULL. 공급자 검색/추출에서 local UUID를 반환하기 전에 공급자 키로 upsert하고 동시 충돌은 기존 행 재조회. 공급자 ID가 없으면 자동 중복 병합하지 않음(D-6). 수동 장소 수정은 저장 메모 변경과 구분. 지역 코드를 주지 않는 공급자(NAVER) 장소는 주소의 "시·도 시·군·구" 전체 이름(줄임말·옛 이름 대응 포함)이 regions.name과 정확히 같을 때만 region_id를 채움(DB 함수 region_code_for_address, -246). 전체 이름은 지역마다 하나뿐이고, 시·군·구 이름만으로는 맞추지 않음.'
+}
+
+// 주변 편의시설(Q-8, S15P31A204-304). 공급자 자료를 미리 넣은 표이고 사용자 자료와 관계가 없다
+Table ev_stations {
+  id varchar(20) [pk, note: '공급자 충전소 ID(statId)']
+  name varchar(200) [not null]
+  address varchar(500)
+  latitude double [not null]
+  longitude double [not null]
+  operator_name varchar(100)
+  use_time varchar(200)
+  seen_at timestamptz [not null, note: '마지막 전국 수신에서 본 시각. 끝까지 받은 수신에서 안 보이면 삭제']
+}
+
+Table ev_chargers {
+  station_id varchar(20) [not null, ref: > ev_stations.id]
+  charger_id varchar(10) [not null]
+  charger_type varchar(4) [note: '공급자 코드. 02는 AC 완속']
+  output_kw integer
+  status varchar(2) [note: '공급자 코드. 2 충전 대기, 3 충전 중, 4 운영 중지, 5 점검 중']
+  status_updated_at timestamptz [note: '이보다 오래된 변경은 덮어쓰지 않음']
+  seen_at timestamptz [not null]
+  indexes {
+    (station_id, charger_id) [pk]
+  }
+}
+
+Table ev_sync_state {
+  id smallint [pk, note: '행 하나(1)']
+  full_completed_at timestamptz [note: 'null이면 충전소 조회 503']
+  status_synced_at timestamptz
+  status_valid boolean [not null, default: false]
+  full_attempt_day date
+  full_attempts integer [not null, default: 0]
+  lease_owner uuid
+  lease_until timestamptz
+}
+
+Table public_toilets {
+  id uuid [pk]
+  name varchar(200) [not null]
+  address varchar(500)
+  latitude double [not null]
+  longitude double [not null]
+  open_time varchar(200)
+  updated_at timestamptz [not null]
+  indexes {
+    (name, latitude, longitude) [unique]
+  }
+}
+
+Table trip_destinations {
+  trip_id uuid [not null, ref: > trips.id]
+  region_id uuid [not null, ref: > regions.id]
+  display_order integer [not null, note: '사용자가 입력한 여행지 순서(0부터). destinationRegionIds 응답 순서. 수정은 전체 교체']
+  source_candidate_id uuid [ref: > poll_candidates.id]
+  indexes {
+    (trip_id, region_id) [pk]
+    (trip_id, display_order) [unique]
+  }
+  Note: '여러 지역 표현 가능. 확정한 여러 지역을 날짜별로 코스에 배분할 수 있음. 날짜 배분은 itinerary_items의 day와 place 지역으로 표현.'
+}
+
+Table personal_bookmarks {
+  user_id uuid [not null, ref: > users.id]
+  place_id uuid [not null, ref: > places.id]
+  source_feed_id uuid [ref: > feeds.id]
+  memo text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  indexes { (user_id, place_id) [pk] }
+  retained_place_name varchar(255) [not null]
+  retained_latitude decimal(10,7) [not null]
+  retained_longitude decimal(10,7) [not null]
+  Note: '본인만 접근. source feed의 일반 장소 참조는 해당 사진·피드 내부 자료의 열람 권한을 부여하지 않음. 원본 소실/권한 상실 시 API는 보존한 이름·좌표·내 메모만 반환하고 source_feed_id는 노출하지 않음.'
+}
+
+Table trip_place_saves {
+  trip_id uuid [not null, ref: > trips.id]
+  place_id uuid [not null, ref: > places.id]
+  saved_by_member_id uuid [not null, ref: > trip_members.id]
+  memo text
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  indexes {
+    (trip_id, place_id, saved_by_member_id) [pk]
+    (trip_id, place_id)
+  }
+  Note: '장소는 하나로 묶고 저장자는 각각 기록하는 D-6 제안. 내 저장 해제가 타인 저장을 지우지 않음. 이탈자 기여의 집계·보관은 Q-4·5.'
+}
+
+Table assets {
+  id uuid [pk]
+  upload_batch_id uuid [ref: > photo_upload_batches.id]
+  owner_user_id uuid [not null, ref: > users.id]
+  trip_id uuid [ref: > trips.id]
+  purpose varchar(16) [not null, note: 'PROFILE/CAPTURE/TRIP_PHOTO']
+  object_key varchar(500) [not null, unique]
+  display_key varchar(500) [not null, unique, note: '원본 PUT으로 변경할 수 없는 별도 메타데이터 제거 표시 이미지']
+  content_type varchar(100) [not null]
+  byte_size bigint [not null]
+  display_content_type varchar(100) [note: '표시 이미지 형식, HEIC는 image/jpeg']
+  metadata_json json [note: '허용된 EXIF 촬영시각/위치만 비공개 저장. 방문 판정 입력. API 공개 DTO·공개 이미지 GPS에는 미노출']
+  status varchar(16) [not null, default: 'PENDING', note: 'PENDING/READY/DELETING/DELETED/CANCELLED']
+  created_at timestamp [not null]
+  deleted_at timestamp
+  upload_expires_at timestamp [not null, note: '기본 PUT URL 10분']
+  expires_at timestamp [not null, note: '기본 미완료/미등록 정리 24시간']
+  original_cleaned_at timestamp [note: 'PUT 만료 후 원본 삭제 완료 시각']
+  objects_deleted boolean [not null, default: false, note: '원본/표시 객체 쌍 삭제 성공 표시. DELETING은 접근 차단만 뜻하므로 여행 정리가 이 값을 별도로 검사. 예약 정리는 PUT 만료 후 이 표시와 무관하게 반복. 사진 참조가 모두 soft-delete여도 객체 정리, 참조 중인 asset 행/FK는 유지하고 FAILED job 상태는 변경하지 않음']
+  Note: '2026-11-06 구현: PROFILE/CAPTURE/TRIP_PHOTO 지원. TRIP_PHOTO는 JPG/PNG/HEIC. 기존 배치 없는 파일도 보존하며 사진 등록에는 같은 배치 필수. CAPTURE는 JPG/PNG. 실제 전체 디코딩·메타데이터 제거 후 READY. 인증 다운로드는 표시 이미지 바이트만 반환. 여행 삭제 뒤 취소할 수 없는 PUT의 늦은 업로드 정리를 위해 DELETING 키 tombstone을 미완료 기한까지 남기며 배치 FK는 비운다. 같은 여행/본인/배치는 여행 행 잠금 뒤 서비스에서 검사한다.'
+}
+
+Ref: users.profile_asset_id > assets.id
+
+Table jobs {
+  id uuid [pk]
+  requested_by_user_id uuid [not null, ref: > users.id]
+  trip_id uuid [ref: > trips.id]
+  kind varchar(40) [not null]
+  status varchar(16) [not null, default: 'QUEUED', note: 'QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED']
+  progress integer [not null, default: 0]
+  input_json json [note: '허용 입력 스냅샷. 비공개 개인 보관함 전체나 인증 토큰 저장 금지']
+  cleanup_scope_json json [note: '삭제 승인 당시 대상 photo/message ID와 cutoffAt 고정. 삭제 작업만 사용, 재가입 이후 자료를 다시 검색해 추가하지 않음']
+  result_json json [note: 'API kind별 result. 정규 엔터티의 FK 대신 무제한 JSON 사용 금지']
+  error_code varchar(64)
+  base_version bigint [note: '일정 변경안 기준 itineraries.version']
+  attempt integer [not null, default: 0, note: '최초 포함 최대 3회']
+  execution_id uuid [note: '매 선점마다 교체하는 fencing 식별자']
+  execution_started_at timestamp [note: '실행 timeout 기준, heartbeat로 연장하지 않음']
+  lease_until timestamp
+  heartbeat_at timestamp
+  next_attempt_at timestamp [not null]
+  applied_by_member_id uuid [ref: > trip_members.id]
+  applied_at timestamp
+  created_at timestamp [not null]
+  finished_at timestamp
+  deleted_at timestamp
+  indexes {
+    (trip_id, kind, created_at)
+    (next_attempt_at, created_at, id) [note: '물리 partial index: QUEUED AND deleted_at IS NULL']
+    lease_until [note: '물리 partial index: RUNNING AND deleted_at IS NULL']
+  }
+  Note: '일반 AI 작업은 생성/진행/완료/열람/적용 시 현재 멤버십·자료 사용 동의를 확인. 코스 변경안은 별도 확인 화면 없이 서버 base_version 검사 제안, 경합/재계산 Q-15. 삭제 작업은 승인 당시 cleanup_scope로 계속 수행하고 요청자에게만 최소 상태 제공, 이탈 후 ACTIVE 검사로 중단하지 않음. ACCOUNT_DELETE는 사용자 폴링 없음. applied는 itinerary proposal에만 사용. WEATHER 제안은 input_json에 원본 작업/선택 대안 ID와 같은 여행·기준 버전 검증 결과 기록. 실패가 현재 코스를 지우지 않음.'
+}
+
+Table extraction_candidates {
+  id uuid [pk]
+  job_id uuid [not null, ref: > jobs.id]
+  name varchar(255) [not null]
+  place_id uuid [ref: > places.id]
+  evidence text
+  confidence decimal(5,4)
+  indexes { job_id }
+  Note: 'PLACE_EXTRACTION 작업만 참조. 후보 place_id가 NULL일 수 있으며 식별 불가 좌표를 임의 생성하지 않음. 선택 후 일반 저장 API로 저장. 2026-11-09 구현: 물리 테이블을 만들지 않고 후보를 jobs.result_json에 저장한다(후보는 작업과 함께 조회·삭제되고 따로 수정하지 않음).'
+}
+
+Table polls {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  created_by_member_id uuid [not null, ref: > trip_members.id]
+  type varchar(16) [not null, note: 'REGION/PLACE']
+  title varchar(200) [not null]
+  status varchar(16) [not null, default: 'OPEN', note: 'OPEN/CLOSED/FINALIZED']
+  version bigint [not null, default: 1]
+  closes_at timestamp [not null]
+  closed_reason varchar(16) [note: 'DEADLINE/NO_VOTES; 0표 확정 없이 마감']
+  closed_at timestamp
+  closed_by_member_id uuid [ref: > trip_members.id, note: '투표를 연 사람이 직접 종료했으면 그 멤버, 시각 마감이면 null. OPEN이면 null(2026-11-16)']
+  finalized_at timestamp
+  eligible_member_count integer [note: '마감 때의 ACTIVE 멤버 수. OPEN이면 null']
+  voted_member_count integer [note: '마감 때 한 표 이상 던진 ACTIVE 멤버 수. OPEN이면 null']
+  reminder_sent_at timestamp [note: '마감 1시간 전 알림(POLL_REMINDER)을 보낸 시각. version과 무관']
+  created_at timestamp [not null]
+  indexes {
+    (trip_id, created_at)
+    closes_at [note: 'status=OPEN 부분 인덱스. 주기 마감용']
+    closes_at [name: 'idx_polls_reminder_due', note: 'status=OPEN AND reminder_sent_at IS NULL 부분 인덱스. 리마인더용']
+  }
+  Note: '참여 대상은 그때그때의 ACTIVE 멤버(2026-11-02 B 결정). 나간 멤버의 표는 집계에서 빼고 마감 때 집계를 고정한다. version은 후보 추가·마감 때만 증가. 지역 확정은 trip_destinations 끝에 추가하고 trips.version 증가.'
+}
+
+Table poll_candidates {
+  id uuid [pk]
+  poll_id uuid [not null, ref: > polls.id]
+  region_id uuid [ref: > regions.id]
+  place_id uuid [ref: > places.id]
+  display_order integer [not null, note: '입력·추가 순서(0부터)']
+  vote_count integer [note: '마감 때 고정한 득표 수. OPEN이면 null']
+  created_at timestamp [not null]
+  indexes {
+    (poll_id, region_id) [unique]
+    (poll_id, place_id) [unique]
+    (poll_id, display_order) [unique]
+  }
+  Note: 'region_id XOR place_id, polls.type과 일치. ACTIVE 멤버가 OPEN·마감 전 추가, version/마감 동시 검사. 후보 삭제 Q-6. 같은 투표 중복 후보 금지.'
+}
+
+Table poll_votes {
+  candidate_id uuid [not null, ref: > poll_candidates.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  created_at timestamp [not null]
+  indexes { (candidate_id, member_id) [pk] }
+  Note: '복수 선택 허용. member는 후보가 속한 여행 멤버여야 함. 요청 후보 전부가 같은 poll에 속하는지 검사. 내 선택 교체는 한 트랜잭션, OPEN 상태와 version 검사.'
+}
+
+Table poll_results {
+  candidate_id uuid [pk, ref: > poll_candidates.id]
+  selected_at timestamp [not null]
+  Note: '시각 마감의 최다 득표 후보 모두에 한 행씩 저장. FINALIZED에만 존재. 서버 자동 확정이며 0표는 CLOSED/NO_VOTES·결과 행 없음으로 마감. 후보 추가/투표/마감 상태·버전 검사와 결과 저장을 원자 처리. 기본 closes_at=화면 서버시각+24h, 마감 1h 전 미투표자 알림. 정책 자체와 전송 job/outbox 구현은 구분.'
+}
+
+Table itineraries {
+  id uuid [pk]
+  trip_id uuid [not null, unique, ref: > trips.id]
+  version bigint [not null, default: 1]
+  updated_by_member_id uuid [not null, ref: > trip_members.id]
+  updated_at timestamp [not null]
+  Note: '여행별 단일 코스. 구간 수단 WALK/CAR/TRANSIT 확정, AI 적용 직후 1단계 undo는 itinerary_undo_states. 모든 ACTIVE 멤버 편집/AI 적용. 편집안·확정본·승인 포인터 없음. 변경/AI 적용/경로 반영은 기준 version 검사 후 증가. 구간 수단은 route_legs. 실시간 전송/재접속 Q-15, 알림 묶음 Q-16.'
+}
+
+Table itinerary_undo_states {
+  itinerary_id uuid [pk, ref: > itineraries.id]
+  applied_job_id uuid [not null, ref: > jobs.id]
+  applied_version bigint [not null]
+  before_content_json json [not null]
+  applied_by_member_id uuid [not null, ref: > trip_members.id]
+  created_at timestamp [not null]
+  Note: '직전 AI 적용 이전 코스 한 개만 보관하는 제안. 적용/스냅샷/버전 증가 원자 처리. 다른 코스 쓰기·undo 후 토큰 제거/무효화, 복원도 새 version. 임의 과거 revision이나 승인 모델 아님. 직후 시간/동시 경합 Q-15. 2026-11-09 구현(S15P31A204-231): before_content_json={items:[{id,placeId,day,order,startTime,stayMinutes}],legs:[{fromItemId,toItemId,transportMode,durationSeconds,distanceMeters,geometryJson,status,queriedAt}]}, 현재 version=applied_version이고 applied_job_id가 일치할 때만 되돌림. 실제로 바꾼 PUT·undo 때 행 삭제, 여행 삭제는 코스보다 먼저 삭제. 시간 제한 없음.'
+}
+
+Table itinerary_items {
+  id uuid [pk]
+  itinerary_id uuid [not null, ref: > itineraries.id]
+  place_id uuid [not null, ref: > places.id]
+  day integer [not null]
+  sequence integer [not null]
+  start_time varchar(5) [note: 'HH:mm']
+  stay_minutes integer [note: '1~1440']
+  indexes { (itinerary_id, day, sequence) [unique, note: 'DEFERRABLE INITIALLY DEFERRED. 전체 교체 중 남는 항목끼리 순서를 맞바꾸므로 커밋 때 검사'] }
+  Note: 'day/sequence는 양수(API의 order=sequence). 일정 PUT은 전체 교체이며 요청에서 빠진 기존 항목은 제거, id를 보낸 항목은 유지. start_time/stay_minutes는 생략/null이면 비움. start_time 현지 시간대 Q-6. 같은 장소 재방문 허용. 항목 최대 200개(2026-11-03 구현, S15P31A204-164).'
+}
+
+Table route_legs {
+  id uuid [pk]
+  itinerary_id uuid [not null, ref: > itineraries.id]
+  from_item_id uuid [not null, ref: > itinerary_items.id]
+  to_item_id uuid [not null, ref: > itinerary_items.id]
+  transport_mode varchar(16) [not null]
+  duration_seconds integer
+  distance_meters integer
+  geometry_json json [note: '지도 경로 LineString 제안, 좌표 경도·위도 순서. 공급자 저장/재사용 조건 Q-12. 경로 공급자 연동 전에는 항상 NULL(엔티티 미매핑)']
+  status varchar(16) [not null, note: 'AVAILABLE/UNAVAILABLE. AVAILABLE이면 시간 필수(AI 코스 제안 적용 구간은 거리·지도선 NULL 가능, 2026-11-09), UNAVAILABLE이면 시간·거리·지도선 모두 NULL']
+  queried_at timestamp [not null, note: '조회 전이면 저장 시각']
+  indexes { (itinerary_id, from_item_id, to_item_id) [unique] }
+  Note: 'transport_mode는 WALK/CAR/TRANSIT. 두 지점이 같은 itinerary에 속하고 동일 날짜 인접 순서인지 서비스가 검증(아니면 422 INVALID_ROUTE_LEGS). 전체 교체 때 구간은 모두 지우고 다시 만든다. 실패값 NULL. 계획 거리이며 실제 이동거리로 집계하지 않음.'
+}
+
+Table checklist_items {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  label varchar(255) [not null]
+  checked boolean [not null, default: false]
+  source varchar(16) [not null, note: 'MANUAL/AI']
+  source_job_id uuid [ref: > jobs.id]
+  reason text
+  modified_by_user boolean [not null, default: false]
+  created_by_member_id uuid [not null, ref: > trip_members.id]
+  version bigint [not null, default: 1]
+  created_at timestamp [not null]
+  deleted_at timestamp
+  indexes { trip_id }
+  checked_by_member_id uuid [ref: > trip_members.id]
+  checked_at timestamp
+  Note: '여행당 공동 목록 확정, 모든 멤버 수정/체크. checked=true이면 같은 여행의 체크한 멤버/시각 필수, 해제하면 둘 다 NULL. 재추천은 jobs 결과로 제안만 제공, 수동 변경/체크/삭제를 덮어쓰지 않음.'
+}
+
+Table visits {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  place_id uuid [not null, ref: > places.id]
+  visited_at timestamp [not null]
+  evidence_type varchar(16) [not null, default: 'MANUAL', note: 'MANUAL/PHOTO']
+  deleted_at timestamp
+  created_at timestamp [not null]
+  indexes {
+    (trip_id, member_id, place_id) [unique, note: 'deleted_at IS NULL인 행만(부분 유일). 여행·멤버·장소당 체크 하나']
+    (trip_id, member_id, created_at, id)
+    member_id
+    place_id
+  }
+  Note: '수동 체크·사진 후보 확인으로 실제 방문 기록. 체크 해제는 deleted_at, 다시 체크하면 새 행. 나가도 남고 여행 삭제 때 지운다. 체크 해제 때 평가가 있으면 409 REVIEW_EXISTS. 실제 방문 판정 Q-7, 자동 GPS/실시간 위치 수집을 요구하지 않음. 지도 집계에서 계획 itinerary_items와 구분.'
+}
+
+Table photo_groups {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  source_job_id uuid [not null, ref: > jobs.id]
+  created_at timestamp [not null]
+  indexes { (id, trip_id) [unique] }
+  Note: 'PHOTO_CLASSIFICATION의 명시적 apply가 만든 유사 사진 묶음. AI UUID는 다른 작업/여행 충돌 검사 후 사용. photos(group_id,trip_id) 복합 FK로 같은 여행만 연결. 적용 대상 성공 사진 2장 이상일 때 생성. 이후 삭제로 한 장만 남아도 유지하고 빈 그룹은 요약에서 제외. 대표 자동 선정·원본 자동 삭제 없음.'
+}
+
+Table photo_classification_applies {
+  job_id uuid [pk, ref: > jobs.id]
+  request_json json [not null, note: '최초 apply 사진 ID·expected version 본문']
+  response_json json [not null, note: '최초 적용 Photo 응답. 재요청에도 현재 권한·사진 생존·version 검사 후 반환']
+  Note: '작업당 한 번 원자 apply. 같은 본문은 version/그룹 중복 증가 없이 최초 결과, 다른 본문은409. 사진/멤버 FK 없이 작업에 귀속. 사진 삭제가 과거 응답을 다시 노출시키지 않도록 서비스에서 현재 상태 재검사.'
+}
+
+Table photo_upload_batches {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  created_by_member_id uuid [not null, ref: > trip_members.id]
+  file_count integer [not null, note: '1~50, 한 번 업로드 장수']
+  registered_count integer [not null, default: 0]
+  created_at timestamp [not null]
+  expires_at timestamp [not null, note: '기본 24시간, 환경 설정 가능']
+  Note: '업로드 intent와 사진 등록 모두 같은 배치/사용자/여행인지 여행 행 잠금 후 검사. 등록 수 증가·사진 생성 원자 처리, asset_id unique 및 같은 등록 재시도 중복 증가 금지. file_count 1~50 및 0<=registered_count<=file_count DB CHECK. 만료 뒤 새 등록 410. 여행 전체 사진 한도 아님. 여행 삭제 때 사진·asset 배치 FK 정리 후 배치 삭제.'
+}
+
+Table photos {
+  id uuid [pk]
+  batch_id uuid [not null, ref: > photo_upload_batches.id, note: '업로드 출처, 등록 시 동일 여행 검사. 여행 이동 후 원래 배치를 유지']
+  trip_id uuid [not null, ref: > trips.id]
+  uploader_member_id uuid [not null, ref: > trip_members.id]
+  asset_id uuid [not null, unique, ref: > assets.id]
+  place_id uuid [ref: > places.id]
+  group_id uuid [ref: > photo_groups.id]
+  captured_at timestamp
+  version bigint [not null, default: 1]
+  created_at timestamp [not null]
+  deleted_at timestamp
+  place_manually_edited boolean [not null, default: false, note: '장소 변경과 null 해제 모두 true. 후속 AI 덮어쓰기 차단']
+  topics_manually_edited boolean [not null, default: false, note: '주제 변경과 [] 해제 모두 true. 후속 AI 덮어쓰기 차단']
+  indexes { (trip_id, created_at) }
+  Note: '업로더·그룹·asset의 trip 동일성 검사. 등록 전 READY·TRIP_PHOTO·업로더 소유 확인. 이탈 시 삭제 선택과 파일 정리 job은 별개 처리.'
+}
+
+Table photo_topics {
+  photo_id uuid [not null, ref: > photos.id]
+  topic varchar(64) [not null]
+  source varchar(16) [not null, note: 'AI/MANUAL']
+  indexes { (photo_id, topic) [pk] }
+  Note: 'LANDSCAPE/FOOD/PEOPLE/OTHER 중 중복 없는 0~4개. source AI/MANUAL CHECK. 수동 해제 이력은 photos.topics_manually_edited로 유지. 물리 삭제는 photo_topics → photos 순서.'
+}
+
+Table photo_delete_requests {
+  photo_id uuid [pk, note: 'photos FK 없음. 사진 정리 후에도 중복 DELETE를 같은 작업으로 연결']
+  trip_id uuid [not null, ref: > trips.id]
+  requested_by_user_id uuid [not null, ref: > users.id]
+  job_id uuid [not null, unique, ref: > jobs.id]
+  Note: '승인 트랜잭션의 영구 삭제 접수증. PHOTO_DELETE cleanup_scope는 단일 photoId, messageIds=[]; private input에 최초 assetId와 원본/표시 키를 고정. 멤버/asset FK 없음. 전체 여행 삭제 후에도 작업 기록과 함께 보존.'
+}
+
+Table reviews {
+  id uuid [pk]
+  visit_id uuid [not null, unique, ref: > visits.id]
+  score integer [not null, note: '1~5 정수 확정, 반 점 없음']
+  body text [not null, note: '공백만 불가. 1,000자(코드 포인트) 상한은 서비스가 검사']
+  version bigint [not null, default: 1]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  Note: '작성자는 visit.member_id로 계산. 방문 하나당 평가 하나(visit_id unique). 삭제는 물리 삭제(2026-11-05 확정)라 재작성은 새 행. 평가가 있는 방문은 체크 해제 409 REVIEW_EXISTS. 여행 삭제 작업(TRIP_DELETE)이 visits보다 먼저 지운다.'
+}
+
+Table expenses {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  registered_by_member_id uuid [not null, ref: > trip_members.id]
+  payer_member_id uuid [not null, ref: > trip_members.id]
+  title varchar(200) [not null]
+  memo text
+  amount_minor bigint [not null, note: '양수 원화 정수, 부동소수점 금지']
+  currency varchar(3) [not null, default: 'KRW', note: 'KRW만 허용']
+  spent_at timestamp [not null]
+  version bigint [not null, default: 1]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  deleted_at timestamp
+  indexes { (trip_id, spent_at) }
+  Note: '등록자만 수정·삭제, 방장/결제자 권한 대체 금지. payer·registered_by와 shares는 같은 여행 멤버십. 이탈 시 경비 보존. 수정과 expense_version 증가 및 shares 재작성은 원자적.'
+}
+
+Table expense_shares {
+  expense_id uuid [not null, ref: > expenses.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  amount_minor bigint [not null]
+  indexes { (expense_id, member_id) [pk] }
+  Note: '선택 분담자별 행. 최소 1명, 중복 금지, 합계=expenses.amount_minor. 균등 분담의 나머지 처리 D-7. 합계/동일 여행은 트랜잭션 검증 또는 물리 복합 FK로 보강. 원금 분담 합계를 보존한다. 정산 10원 올림과 차액은 Q-10. 완료 상태 없음.'
+}
+
+Table feeds {
+  id uuid [pk]
+  trip_id uuid [not null, unique, ref: > trips.id]
+  published_by_member_id uuid [not null, ref: > trip_members.id]
+  title varchar(200) [not null]
+  body text [not null]
+  cover_photo_id uuid [ref: > photos.id]
+  public_itinerary_json json
+  public_itinerary_version bigint
+  public_expense_summary_json json
+  version bigint [not null, default: 1]
+  published_at timestamp [not null]
+  updated_at timestamp [not null]
+  deleted_at timestamp
+  Note: '명시적 게시 때만 생성, 여행 생성 때 자동 생성 금지. 여행당 공동 피드 하나·게시 후 기본 전체 공개. published_by는 감사용이며 독점 작성권 아님. 모든 ACTIVE 멤버 게시/삭제, 제목/본문 공동 편집은 제안. deleted_at tombstone이면 모든 노출/파일 접근 차단·다른 멤버 삭제 알림. 게시 알림 없음. 원본 여행/사진/경비 삭제 아님. 재게시/ID 재사용·공통 공개 내용·비공개 계정 결합 Q-3. 항목별 include 플래그·사진 동의 없음.'
+}
+
+Table feed_photos {
+  feed_id uuid [not null, ref: > feeds.id]
+  photo_id uuid [not null, ref: > photos.id]
+  sequence integer [not null]
+  caption text
+  indexes {
+    (feed_id, photo_id) [pk]
+    (feed_id, sequence) [unique]
+  }
+  Note: '공통 공개 정책에 포함된 공동 피드 사진. 같은 여행·미삭제 원본 검사. 사진 공개 동의 상태 없음. 사진 이동/삭제 시 참조·표지 표시와 파일 접근을 즉시 제외.'
+}
+
+Table feed_places {
+  feed_id uuid [not null, ref: > feeds.id]
+  place_id uuid [not null, ref: > places.id]
+  sequence integer [not null]
+  indexes { (feed_id, place_id) [pk] }
+  Note: '공개 장소 표현. 사진/경로/경비 등 내부 원본 전체를 피드에 자동 노출하지 않음.'
+}
+
+Table feed_member_visibilities {
+  feed_id uuid [not null, ref: > feeds.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  version bigint [not null, default: 1]
+  updated_at timestamp [not null]
+  indexes { (feed_id, member_id) [pk] }
+  Note: '같은 여행 멤버 본인 경로 설정. hidden 뷰어 집합은 feed_hidden_viewers, version은 집합 전체 교체용. 새 멤버/설정 미존재는 빈 집합·version=1로 보충 생성 제안. 이탈자 경로는 멤버십으로 제외.'
+}
+
+Table feed_hidden_viewers {
+  feed_id uuid [not null, ref: > feeds.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  viewer_user_id uuid [not null, ref: > users.id]
+  created_at timestamp [not null]
+  indexes { (feed_id, member_id, viewer_user_id) [pk] }
+  Note: '본인 프로필/피드/지도 경로에서만 특정 친구 숨김. 설정은 같은 feed/member의 visibility 행에 속함을 복합 FK 또는 트랜잭션으로 보장. 직접 공동 피드·타 멤버 경로는 차단하지 않음. 전체 교체와 visibility version 증가를 원자 처리. 자기 자신 제외 제안.'
+}
+
+Table feed_likes {
+  feed_id uuid [not null, ref: > feeds.id]
+  user_id uuid [not null, ref: > users.id]
+  created_at timestamp [not null]
+  indexes { (feed_id, user_id) [pk] }
+  Note: '좋아요 대상을 공동 피드로 잡은 D-12 제안. 좋아요는 방문·평점과 별개 신호.'
+}
+
+Table chat_rooms {
+  id uuid [pk]
+  trip_id uuid [not null, unique, ref: > trips.id]
+  next_sequence bigint [not null, default: 1]
+  created_at timestamp [not null]
+  Note: '여행당 그룹 채팅방 하나. DIRECT 및 사용자 쌍 필드 없음. 참여 권한은 현재 여행 멤버십. API type은 TRIP 상수.'
+}
+
+Table chat_participants {
+  room_id uuid [not null, ref: > chat_rooms.id]
+  user_id uuid [not null, ref: > users.id]
+  joined_at timestamp [not null]
+  left_at timestamp
+  visible_from_sequence bigint [not null, default: 1, note: 'Q-13(11/02): 신규·재참여 모두 처음부터 전체 대화를 보므로 항상 1']
+  indexes { (room_id, user_id) [pk] }
+  Note: 'TRIP 멤버십과 입장/이탈을 트랜잭션으로 동기화. 재참여해도 처음부터 전체 대화를 본다(Q-13, 11/02). 그룹 비참여자는 수신·조회 불가.'
+}
+
+Table events {
+  id uuid [pk]
+  type varchar(64) [not null]
+  trip_id uuid [ref: > trips.id]
+  actor_user_id uuid [ref: > users.id]
+  target_type varchar(32) [not null]
+  target_id uuid [not null]
+  payload_json json [note: '메시지 카드에 필요한 최소 공개 정보만']
+  deduplication_key varchar(255) [not null, unique]
+  created_at timestamp [not null]
+  published_at timestamp
+  Note: '서버만 생성하는 이벤트/outbox 제안. target은 타입별 서비스 검증이 필요하고 일반 FK로 보장되지 않음. 재전송 시 같은 event id 사용. 이벤트 종류·보관 Q-14.'
+}
+
+Table messages {
+  id uuid [pk]
+  room_id uuid [not null, ref: > chat_rooms.id]
+  sender_user_id uuid [ref: > users.id]
+  type varchar(16) [not null, note: 'TEXT/SYSTEM']
+  sequence bigint [not null]
+  text text
+  client_message_id uuid
+  event_id uuid [ref: > events.id]
+  created_at timestamp [not null]
+  deleted_at timestamp
+  indexes {
+    (room_id, sequence) [unique]
+    (sender_user_id, client_message_id) [unique]
+    (room_id, event_id) [unique]
+  }
+  Note: 'TEXT는 sender/client_message_id 필수, SYSTEM은 event_id 필수·sender NULL. 같은 클라이언트 ID 재전송은 본문까지 일치해야 멱등. 이탈 시 본인 채팅 삭제는 본문 제거(2026-11-04 확정), 메시지 일반 수정/삭제·첨부·읽음은 추가하지 않음(Q-13, 11/02). 본문 최대 1,000자, sequence는 chat_rooms 행 잠금으로 발급. event_id FK는 events 테이블이 생길 때 건다. 이탈 시 본문 제거(D-10, LEAVE_CLEANUP)는 text NULL + deleted_at으로 하고 행과 sequence는 남긴다. TEXT는 본문이 있거나 지워진 상태이며, 지운 메시지는 본문이 없다.'
+}
+
+Table notifications {
+  id uuid [pk]
+  recipient_user_id uuid [not null, ref: > users.id]
+  event_id uuid [not null, ref: > events.id]
+  read_at timestamp
+  dismissed_at timestamp
+  created_at timestamp [not null]
+  indexes {
+    (recipient_user_id, event_id) [unique]
+    (recipient_user_id, read_at, created_at)
+  }
+  Note: '앱 내 목록·팝업 공통 원본. 권한 검사 후 본인에게만 반환. 이동 시 현재 권한 재검사. 푸시·실제 송금 확인 이벤트 없음. 팔로우·투표·참여·코스 변경 포함, 정산 완료/사진 동의/코스 승인 이벤트 없음. 코스 변경 묶음 Q-16. event_receipts와 같은 읽음 상태로 동기화.'
+}
+
+Table idempotency_records {
+  user_id uuid [not null, ref: > users.id]
+  request_scope varchar(255) [not null]
+  idempotency_key varchar(100) [not null]
+  request_hash varchar(255) [not null]
+  status varchar(16) [not null, note: 'IN_PROGRESS/COMPLETED']
+  http_status integer
+  response_json json
+  created_at timestamp [not null]
+  expires_at timestamp [not null]
+  indexes { (user_id, request_scope, idempotency_key) [pk] }
+  Note: 'D-1 요청 중복 방지 저장소 제안. 생성 리소스와 원자적으로 완료. 원문 인증정보·소셜 토큰 응답 저장 금지. 보관/TTL Q-12.'
+}
+
+// DB/서비스에서 추가 보장할 불변식
+// 1. FK만으로 같은 trip까지 보장되지 않는 참조는 복합 FK 또는 트랜잭션 검증을 보강한다.
+//    owner/member, invitation/member, savedPlace/member, poll/member/voter,
+//    itinerary/editor, photo/asset/uploader/group, expense/payer/registrant/share가 대상이다.
+// 2. 여행 생성/이탈/강제 이탈/방장 양도는 trip 행을 잠그고 권한과 ACTIVE 상태를 재검사한다.
+// 3. 일정 PUT/AI 적용은 version compare-and-swap, 항목/경로 변경을 한 트랜잭션에서 수행한다.
+// 4. 투표 내 선택 교체/종료/확정은 poll 상태와 version을 검사해 원자적으로 갱신한다.
+// 5. 경비·분담액·trip.expense_version은 함께 변경한다. 계산은 한 스냅샷에서 읽는다.
+// 6. 이탈 때 membership/room 참여 해제·owner 양도·삭제 job과 고정 대상 scope 생성을 원자적으로 기록한다.
+//    재가입하여 같은 membership ID를 사용하더라도 과거 정리 job은 신규 사진·메시지를 삭제하지 않는다.
+// 7. feed 사진/장소와 cover는 같은 여행 및 허용된 공개 표현이어야 한다.
+// 8. 실제 방문 집계·타임라인·정산·추천·트렌드는 원본에서 계산한다.
+//    실제 이동거리 수집·집계 기준은 Q-8이며 현재 계획 경로를 실제 거리로 저장하지 않는다.
+// 9. 지역 통계·날씨 응답은 공급자 조회/캐시로 제안, 영속 테이블 확정은 Q-9·12.
+//    시설(Q-8, 2026-11-11 S15P31A204-304): 충전소는 ev_stations·ev_chargers에 미리 넣고 상태만 주기 갱신, 화장실은 public_toilets,
+//    약국·편의점·주유소는 places에서 찾는다.
+// 10. 본문/사진/이벤트 삭제·계정 탈퇴·공동자료 보존의 물리 삭제/익명화는 Q-11 합의 후 DDL에 반영한다.
+
+
+// v0.4 최신 요약 기준으로 유지한 관계. JSON 스냅샷은 과거 표시 재현 목적이며 쓰기 FK를 대체하지 않는다.
+Table user_settings {
+  user_id uuid [pk, ref: > users.id]
+  photo_classification_mode varchar(16) [not null, default: 'CONFIRM']
+  visit_detection_mode varchar(16) [not null, default: 'CONFIRM']
+  extraction_mode varchar(16) [not null, default: 'CONFIRM']
+  checklist_mode varchar(16) [not null, default: 'CONFIRM']
+  weather_mode varchar(16) [not null, default: 'SUGGEST_ONLY']
+  follow_requests_enabled boolean [not null, default: true]
+  vote_course_enabled boolean [not null, default: true]
+  trip_changes_enabled boolean [not null, default: true]
+  version bigint [not null, default: 1]
+  updated_at timestamp [not null]
+  Note: '초기값은 제안. AI 네 기능 AUTO/CONFIRM/OFF, 날씨 SUGGEST_ONLY/OFF. 원자 PATCH. OFF는 신규 작업 중단, 진행 작업 영향 Q-11. 모드로 멤버십/버전/자료 접근 검사 우회 금지.'
+}
+
+Table preference_rejections {
+  user_id uuid [not null, ref: > users.id]
+  preference_key varchar(64) [not null]
+  rejected_at timestamp [not null]
+  indexes { (user_id, preference_key) [pk] }
+  Note: '추론 개별 삭제와 재생성 거부 표식. 기간·재추론 조건 Q-5.'
+}
+
+Table poll_participants {
+  poll_id uuid [not null, ref: > polls.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  indexes { (poll_id, member_id) [pk] }
+  Note: '만들지 않음(2026-11-02 B 결정, Q-6). 참여 대상은 생성 시 스냅샷이 아니라 그때그때의 ACTIVE 멤버다. 고유 투표 인원은 poll_votes를 ACTIVE 멤버로 필터·중복 제거해 계산하고 마감 때 polls에 고정.'
+}
+
+Table visit_candidates {
+  id uuid [pk]
+  job_id uuid [not null, ref: > jobs.id]
+  trip_id uuid [not null, ref: > trips.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  place_id uuid [not null, ref: > places.id]
+  visited_at timestamp [not null]
+  status varchar(16) [not null, default: 'PENDING', note: 'PENDING/CONFIRMED/INVALIDATED']
+  visit_id uuid [unique, ref: > visits.id]
+  version bigint [not null, default: 1]
+  created_at timestamp [not null]
+  Note: '후보만으로 실제 방문 집계/평가 자격 부여 금지. 본인 확인 시 visit과 연결. 사진 이동·삭제 시 미확정 후보 무효화. 판정 Q-7.'
+}
+
+Table visit_candidate_photos {
+  candidate_id uuid [not null, ref: > visit_candidates.id]
+  photo_id uuid [not null, ref: > photos.id]
+  indexes { (candidate_id, photo_id) [pk] }
+}
+
+Table settlements {
+  id uuid [pk]
+  trip_id uuid [not null, ref: > trips.id]
+  calculated_by_member_id uuid [not null, ref: > trip_members.id]
+  expense_version bigint [not null]
+  currency varchar(3) [not null, default: 'KRW', note: 'KRW만 허용']
+  total_amount_minor bigint [not null, note: '원금 총액']
+  rounding_policy varchar(64) [not null, note: 'Q-10 규칙 식별자. 현재 TRIP_TOTAL_CEIL_10_TO_TOP_CREDITOR']
+  rounding_adjustment_minor bigint [not null, note: '원금 대비 총 차액. 원금 기준 받을 돈이 가장 많은 한 멤버에게 귀속']
+  expense_snapshot_json json [not null, note: '비용 ID/버전·등록값·선택 분담자/분담액 포함, 과거 계산 재현용']
+  version bigint [not null, default: 1]
+  calculated_at timestamp [not null]
+  indexes { (trip_id, calculated_at, id) }
+  Note: '현재 계산은 trips.current_settlement_id, 같은 여행 검사. 원금 스냅샷·차액·계산 규칙 저장 및 포인터 교체 원자 처리. 비용 버전/현재 포인터 불일치면 stale. 완료 상태/이벤트 없음. 여행이 있는 동안 모두 보관, 물리 삭제 시점은 Q-11. trips.current_settlement_id와 서로 참조하므로 여행 물리 삭제 시 포인터를 먼저 비운다.'
+}
+
+Table settlement_members {
+  settlement_id uuid [not null, ref: > settlements.id]
+  member_id uuid [not null, ref: > trip_members.id]
+  paid_minor bigint [not null]
+  base_owed_minor bigint [not null, note: '저장된 원금 분담액의 사람별 합계(올림 전)']
+  owed_minor bigint [not null, note: '1인 올림 부담액, 10원 배수']
+  rounding_adjustment_minor bigint [not null]
+  balance_minor bigint [not null]
+  display_order integer [not null, note: '계산할 때의 참여 순. 이후 재참여해도 과거 계산 순서 유지']
+  indexes {
+    (settlement_id, member_id) [pk]
+    (settlement_id, display_order) [unique]
+  }
+}
+
+Table settlement_transfers {
+  id uuid [pk]
+  settlement_id uuid [not null, ref: > settlements.id]
+  from_member_id uuid [not null, ref: > trip_members.id]
+  to_member_id uuid [not null, ref: > trip_members.id]
+  amount_minor bigint [not null]
+  display_order integer [not null, note: '계산할 때 정한 표시 순서(금액이 큰 순)']
+  indexes { (settlement_id, display_order) [unique] }
+  Note: '같은 여행·서로 다른 멤버·양수 검증. 송금 제안액이며 이 금액을 다시 10원 단위로 올리지 않음. 1인 부담액 올림 차액은 수령자 잔액에 한 번만 더한 뒤 계산. 완료/은행 상태 없음.'
+}
+
+Table feed_reviews {
+  feed_id uuid [not null, ref: > feeds.id]
+  review_id uuid [not null, ref: > reviews.id]
+  place_id uuid [not null, ref: > places.id]
+  score integer [not null]
+  body text [not null]
+  written_at timestamp [not null]
+  indexes { (feed_id, review_id) [pk] }
+  Note: '같은 여행의 공통 공개 정책에 따른 평가를 게시 시 스냅샷. 원본 삭제 시 공개 표시도 제외. 공통 공개 콘텐츠 정책 Q-3, 사용자별 include 설정 없음.'
+}
+
+Table event_receipts {
+  event_id uuid [not null, ref: > events.id]
+  user_id uuid [not null, ref: > users.id]
+  read_at timestamp [not null]
+  indexes { (event_id, user_id) [pk] }
+  Note: '허용된 수신자만 생성, 알림과 시스템 카드 읽음의 단일 기준. notifications.read_at은 같은 트랜잭션으로 동기화하는 캐시. 일반 대화 읽음과 별개.'
+}
+
+// 추가 불변식: feed visibility 멤버·공개 사진/평가/코스는 모두 같은 여행이어야 한다.
+// 공개 범위/팔로우 해제·멤버 숨김/이탈·원본 삭제는 목록/파일/요약 접근에서 즉시 검사한다.
+// 방문 후보·정산 관련 멤버/자료의 동일 여행을 보강한다. 정산 원금과 올림 차액은 구분한다.
+// 실시간 편집·코스 알림 묶음은 Q-15·16 합의 전 전송/집계용 테이블을 임의 확정하지 않는다.

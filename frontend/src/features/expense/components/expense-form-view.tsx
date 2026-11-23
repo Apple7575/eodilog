@@ -1,0 +1,312 @@
+import { SCROLL_DECELERATION } from '@/theme/scroll';
+import type { ReactNode } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Stagger } from '@/components/ui/stagger';
+import { Button, Header, Icon, TextField } from '@/components/ui';
+import { PressableScale } from '@/components/ui/pressable-scale';
+import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
+import { AMOUNT_MAX_LENGTH, formatThousands } from '@/lib/format-number';
+import { colors, layout, radius, spacing, typography } from '@/theme';
+
+import { type ExpenseForm, TITLE_INPUT_MAX_LENGTH } from '../expense-rules';
+import type { TripMember } from '../types';
+
+import { MemberChip } from './member-chip';
+import { KeyboardLift } from '@/components/ui/keyboard-lift';
+
+export type ExpenseFormMode = 'create' | 'edit' | 'view';
+
+const TITLES: Record<ExpenseFormMode, string> = {
+  create: '지출 추가',
+  edit: '지출 수정',
+  view: '지출',
+};
+
+export type ExpenseFormViewProps = {
+  /** create 지출 추가 / edit 내가 등록한 지출 / view 남이 등록한 지출(보기만) */
+  mode: ExpenseFormMode;
+  tripTitle: string;
+  /** 고를 수 있는 동행. 지금 여행에 있는 사람 + 이 지출에 이미 들어 있던 나간 사람 */
+  members: TripMember[];
+  myMemberId: string | null;
+  form: ExpenseForm;
+  onChange: (next: Partial<ExpenseForm>) => void;
+  onClose: () => void;
+  onSave: () => void;
+  /** 규칙에 맞아 저장할 수 있는지. 금액 0·이름 없음이면 누를 수 없다 */
+  canSave: boolean;
+  /** 금액 칸 아래 오류. 상한을 넘었을 때 */
+  amountError?: string;
+  saving?: boolean;
+  /** 저장 실패. 맨 위에 안내 상자, 버튼은 [다시 저장] */
+  failed?: boolean;
+  /**
+   * 실패 이유가 버전 충돌(그 사이 지출이 먼저 바뀜). 안내 문구만 바뀐다.
+   * 목록은 이미 다시 읽었으니 [다시 저장]은 지금 입력한 내용으로 덮어쓴다
+   */
+  conflict?: boolean;
+  /** edit에서만. [삭제] → S50 확인 시트 */
+  onDelete?: () => void;
+  /**
+   * 아래 줄 왼쪽, 저장 버튼 옆. 지출 추가의 [말로 한 번에](N10).
+   * 엄지가 닿는 자리라 상단 바에서 옮겼다(2026-11-13 사용자 결정). 자판이 떠 있으면 숨긴다
+   */
+  bottomLeft?: ReactNode;
+  /** 제목을 바꿔 쓸 때. 말로 입력한 초안 고치기(N11)는 "초안 고치기" */
+  titleOverride?: string;
+  /** 저장 버튼 글자를 바꿔 쓸 때. 초안 고치기는 "적용" */
+  saveLabel?: string;
+  /** 금액 위에 보이는 안내. 초안 고치기는 그 초안이 나온 말 */
+  notice?: ReactNode;
+};
+
+/** S35 지출 추가·수정 화면. 상태: 지출 추가 / 지출 저장 실패 */
+export function ExpenseFormView({
+  mode,
+  tripTitle,
+  members,
+  myMemberId,
+  form,
+  onChange,
+  onClose,
+  onSave,
+  canSave,
+  amountError,
+  saving = false,
+  failed = false,
+  conflict = false,
+  onDelete,
+  bottomLeft,
+  titleOverride,
+  saveLabel,
+  notice,
+}: ExpenseFormViewProps) {
+  const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardVisible();
+  const readOnly = mode === 'view';
+  const ordered = [...members].sort((a, b) => a.joinOrder - b.joinOrder);
+  const chosen = new Set(form.participantMemberIds);
+
+  const toggleParticipant = (id: string) =>
+    onChange({
+      participantMemberIds: chosen.has(id)
+        ? form.participantMemberIds.filter((x) => x !== id)
+        : ordered.filter((m) => chosen.has(m.id) || m.id === id).map((m) => m.id),
+    });
+
+  return (
+    <View style={styles.screen}>
+      <Header
+        close
+        title={titleOverride ?? TITLES[mode]}
+        subtitle={tripTitle}
+        subtitleIcon="trip"
+        onBack={onClose}
+      />
+      <KeyboardLift style={styles.flex}>
+        <ScrollView
+          decelerationRate={SCROLL_DECELERATION}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Stagger itemStyle={styles.staggerItem}>
+            {failed ? <SaveFailedBox conflict={conflict} /> : null}
+            {notice}
+
+            <Section title="금액">
+              <TextField
+                variant="filled"
+                large
+                value={form.amount}
+                onChangeText={(v) => onChange({ amount: formatThousands(v) })}
+                keyboardType="number-pad"
+                placeholder="0"
+                maxLength={AMOUNT_MAX_LENGTH}
+                hideCount
+                editable={!readOnly}
+                error={amountError}
+                accessibilityLabel="금액"
+                style={styles.amount}
+                trailing={<Text style={[typography.title1, styles.text]}>원</Text>}
+              />
+            </Section>
+
+            <Section title="낸 사람">
+              <View style={styles.chips}>
+                {ordered.map((m) => (
+                  <MemberChip
+                    key={m.id}
+                    name={m.user.nickname}
+                    me={m.id === myMemberId}
+                    selected={form.payerMemberId === m.id}
+                    disabled={readOnly}
+                    onPress={() => onChange({ payerMemberId: m.id })}
+                  />
+                ))}
+              </View>
+            </Section>
+
+            <Section
+              title="나눌 사람"
+              right={<Text style={[typography.caption, styles.sub]}>{chosen.size}명 선택</Text>}
+            >
+              <View style={styles.chips}>
+                {ordered.map((m) => (
+                  <MemberChip
+                    key={m.id}
+                    name={m.user.nickname}
+                    me={m.id === myMemberId}
+                    multiple
+                    selected={chosen.has(m.id)}
+                    disabled={readOnly}
+                    onPress={() => toggleParticipant(m.id)}
+                  />
+                ))}
+              </View>
+              {/* Figma는 13/20 보통 굵기인데 글자 토큰에 없어 caption(12/20)으로 쓴다 */}
+              <Text style={[typography.caption, styles.sub]}>10원 단위로 올려서 나눠요</Text>
+            </Section>
+
+            <Section title="항목 이름">
+              <TextField
+                variant="filled"
+                value={form.title}
+                onChangeText={(v) => onChange({ title: v })}
+                maxLength={TITLE_INPUT_MAX_LENGTH}
+                editable={!readOnly}
+                accessibilityLabel="항목 이름"
+                returnKeyType="done"
+              />
+            </Section>
+          </Stagger>
+        </ScrollView>
+
+        {readOnly ? null : (
+          <View
+            style={[
+              styles.bottom,
+              { paddingBottom: Math.max(insets.bottom + spacing[16], spacing[20]) },
+            ]}
+          >
+            {bottomLeft && !keyboardVisible ? (
+              <View style={styles.bottomLeft}>{bottomLeft}</View>
+            ) : null}
+            {onDelete ? (
+              <PressableScale
+                accessibilityRole="button"
+                onPress={onDelete}
+                disabled={saving}
+                accessibilityLabel="삭제"
+                style={({ pressed }) => [styles.delete, pressed && styles.pressed]}
+              >
+                <Icon name="trash" size={22} color={colors.status.danger} />
+              </PressableScale>
+            ) : null}
+            <Button
+              label={failed ? '다시 저장' : (saveLabel ?? '저장')}
+              icon={failed ? 'refresh' : 'check'}
+              onPress={onSave}
+              disabled={!canSave}
+              loading={saving}
+            />
+          </View>
+        )}
+      </KeyboardLift>
+    </View>
+  );
+}
+
+function Section({
+  title,
+  right,
+  children,
+}: {
+  title: string;
+  right?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <Text style={[typography.bodyBold, styles.text]}>{title}</Text>
+        {right}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/**
+ * README 상태 공통 모양의 안내 상자(회색). 문구는 값 문서 "지출 저장 실패".
+ * 버전 충돌 문구는 문서에 없어 정한 것이다(지출은 등록한 사람만 고쳐서, 보통 내 다른 기기에서 먼저 고친 경우)
+ */
+function SaveFailedBox({ conflict }: { conflict: boolean }) {
+  return (
+    <View style={styles.failBox} accessibilityLiveRegion="polite">
+      <View style={styles.failIcon}>
+        <Icon name="alert" size={22} color={colors.status.danger} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={[typography.bodyBold, styles.text]}>
+          {conflict ? '그 사이 지출이 바뀌었어요' : '지출을 저장하지 못했어요'}
+        </Text>
+        <Text style={[typography.caption, styles.sub]}>
+          {conflict
+            ? '다시 저장하면 지금 입력한 내용으로 바뀌어요'
+            : '저장하지 못했어요. 다시 눌러 주세요'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  // 차례로 나타나는 구역을 감싼 칸. 한 구역이 여러 줄이면 그 사이 간격을 스크롤 내용과 같게 둔다
+  staggerItem: { gap: spacing[24] },
+  screen: { flex: 1, backgroundColor: colors.surface.white },
+  flex: { flex: 1 },
+  content: {
+    paddingHorizontal: layout.screenPaddingX,
+    paddingTop: spacing[16],
+    paddingBottom: spacing[24],
+    gap: spacing[24],
+  },
+  section: { gap: spacing[12] },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  amount: { textAlign: 'right' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[10] },
+  failBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[14],
+    padding: spacing[20],
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface.subtle,
+    // 금액 위 간격 28 = content gap 24 + 4
+    marginBottom: spacing[4],
+  },
+  failIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bottom: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: spacing[10],
+    paddingHorizontal: layout.screenPaddingX,
+    paddingTop: spacing[12],
+  },
+  // 왼쪽 칸이 남은 폭을 차지해 저장 버튼은 오른쪽 끝에 그대로 남는다
+  bottomLeft: { flex: 1, alignItems: 'flex-start' },
+  delete: { paddingHorizontal: spacing[16], paddingVertical: spacing[12] },
+  pressed: { opacity: 0.6 },
+  text: { color: colors.text.default },
+  sub: { color: colors.text.icon },
+});

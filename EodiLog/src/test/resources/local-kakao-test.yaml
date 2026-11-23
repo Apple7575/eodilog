@@ -1,0 +1,35 @@
+# Explicit independent config name prevents application-local.yaml importing the real .env.
+spring:
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
+  docker:
+    compose:
+      enabled: false
+app:
+  jobs:
+    enabled: false
+    polling: 1s
+    timeout: 60s
+    lease: 120s
+    heartbeat: 20s
+    max-attempts: 3
+    retry-delay: 30s
+    batch-size: 1
+    concurrency: 2
+  storage:
+    bucket: fake-local-bucket
+    region: ap-northeast-2
+    upload-url-ttl: 10m
+  auth:
+    kakao-client-id: fake-local-client
+    kakao-client-secret: fake-local-secret
+    allowed-redirects: http://localhost:8080/oauth/kakao/callback
+    jwt-secret: fake-local-test-key-with-at-least-thirty-two-bytes
+    issuer: eodilog-local-test
+    access-seconds: 3600
+    refresh-seconds: 1209600
+    attempt-seconds: 300

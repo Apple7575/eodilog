@@ -1,0 +1,7 @@
+# OMC operational artifacts (ask/team outputs, state, logs)
+# .omc/skills/ is the intentional committable exception
+.omc/*
+!.omc/skills/
+
+# Local environment secrets
+/.env
