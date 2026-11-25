@@ -1,0 +1,17 @@
+Checked UTC: 2026-11-25T06:57:57.0490284Z
+Checkout: c1d241267d99f6fbda526d9e38de771b6b8d7916
+Command: adb devices -l
+List of devices attached
+
+Follow-up: SM-S901N appeared in adb devices and get-state returned device.
+Shell and exec-out queries failed with "error: closed". Logcat then waited for a device.
+OS, package, permissions, device storage and runtime samples could not be verified.
+
+Later USB authorization succeeded briefly: Galaxy S22 (SM-S901N), Android 16 / API 36,
+221 GiB available as displayed by df -h; EodiLog package path was empty.
+The device disappeared from ADB again before fixture transfer and installation.
+
+The arm64 Expo development APK built successfully at frontend/android/app/build/outputs/apk/debug/app-debug.apk.
+SHA-256: 6F54F5866B27B187391E77DFFE70EEBDFB7B3852BC0CE38D99F99216AE0235FA
+Build used CMake 3.31 and CMAKE_OBJECT_PATH_MAX=190 in ignored local Reanimated and Worklets dependencies.
+The first 100 synthetic JPEGs and 10 additions are prepared on the host. The device list is empty after the APK build, so installation and measurements remain pending.

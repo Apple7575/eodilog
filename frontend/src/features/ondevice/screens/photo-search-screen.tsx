@@ -2,18 +2,20 @@
 // 사진은 서버로 보내지 않는다
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CenterNotice, Header } from '@/components/ui';
 import { SkeletonList } from '@/components/ui/skeleton';
+import { env } from '@/config/env';
 import { getAllMyTrips } from '@/features/my-trips';
 import { getSettings } from '@/features/settings/api';
 import { SETTINGS_QUERY_KEY } from '@/features/settings/hooks/use-server-settings';
 import { colors, layout, spacing } from '@/theme';
 import { SCROLL_DECELERATION } from '@/theme/scroll';
 
+import { benchmarkEnabled, benchmarkEvent } from '../benchmark';
 import { GalleryAiPanel } from '../components/gallery-ai-panel';
 import { tripTimeRange } from '../search-rules';
 import { useGalleryAi } from '../use-gallery-ai';
@@ -22,13 +24,26 @@ const COLUMNS = 3;
 const GAP = spacing[8];
 
 export function PhotoSearchScreen() {
+  useEffect(() => {
+    if (benchmarkEnabled) benchmarkEvent('screen-mounted');
+  }, []);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const tile = Math.floor(
     (Math.min(width, 480) - layout.screenPaddingX * 2 - GAP * (COLUMNS - 1)) / COLUMNS,
   );
-  const trips = useQuery({ queryKey: ['me', 'trips'], queryFn: getAllMyTrips });
-  const settings = useQuery({ queryKey: SETTINGS_QUERY_KEY, queryFn: getSettings });
+  // Benchmark fixture metadata uses the in-process mock adapter even without a phone data connection.
+  const mockNetworkMode = benchmarkEnabled && env.devMock ? 'always' : undefined;
+  const trips = useQuery({
+    queryKey: ['me', 'trips'],
+    queryFn: getAllMyTrips,
+    networkMode: mockNetworkMode,
+  });
+  const settings = useQuery({
+    queryKey: SETTINGS_QUERY_KEY,
+    queryFn: getSettings,
+    networkMode: mockNetworkMode,
+  });
 
   // 기간이 정해진 여행만, 최근 여행부터
   const dated = useMemo(

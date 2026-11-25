@@ -4,7 +4,14 @@ export const TOPICS = ['LANDSCAPE', 'FOOD', 'PEOPLE', 'OTHER'] as const;
 export type Topic = (typeof TOPICS)[number];
 
 export type Models = { loadMs: number; bytes: { image: number; text: number } };
-export type PhotoResult = { features: Float32Array; topic: Topic; scores: number[]; ms: number };
+export type PhotoResult = {
+  features: Float32Array;
+  topic: Topic;
+  scores: number[];
+  ms: number;
+  preprocessMs?: number;
+  inferenceMs?: number;
+};
 
 const unsupported = () => new Error('웹 미리보기에서는 폰 AI 모델을 쓸 수 없어요');
 

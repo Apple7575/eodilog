@@ -4,9 +4,12 @@ import { File } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import { Platform } from 'react-native';
 
+import { env } from '@/config/env';
+
 import { photoContentType } from '../photo/photo-rules';
 import type { PickedPhoto } from '../photo/types';
 import { analyzePhoto, readCache, writeCache, type Models, type Topic } from './engine';
+import { benchmarkEvent, benchmarkEnabled } from './benchmark';
 import { packVector } from './search-rules';
 
 /** 한 번에 정리하는 최대 장수(여행 하나에 이보다 많으면 최근 사진부터) */
@@ -14,6 +17,7 @@ export const MAX_GALLERY_PHOTOS = 1000;
 const PAGE = 200;
 /** 새로 계산한 사진이 이만큼 쌓이면 저장한다. 저장은 파일 전체를 다시 쓰므로(1,000장 약 5MB) 자주 하지 않는다 */
 const SAVE_EVERY = 100;
+const FIXTURE_NAME = /^EODIBENCH_(?:(?:BASE|NEW)_)?\d{4,5}\.jpg$/i;
 
 export type GalleryPhoto = {
   id: string;
@@ -58,6 +62,7 @@ export async function tripGalleryPhotos(
         createdBefore: range.before,
       });
       for (const a of page.assets) {
+        if (benchmarkEnabled && env.devMock && !FIXTURE_NAME.test(a.filename)) continue;
         if (seen.has(a.id) || out.length >= MAX_GALLERY_PHOTOS) continue;
         seen.add(a.id);
         out.push({
@@ -86,32 +91,89 @@ export async function analyzeGallery(
   photos: readonly GalleryPhoto[],
   onProgress: (done: number, total: number, msPerPhoto: number | null) => void,
   isCancelled: () => boolean,
+  runId?: number,
 ): Promise<AnalyzedPhoto[]> {
+  const measured = benchmarkEnabled && runId !== undefined;
+  const now = () => (measured ? Date.now() : 0);
+  const cacheStart = now();
   const cache = readCache();
+  const cacheReadMs = now() - cacheStart;
+  const cacheEntriesBefore = cache.size;
+  let reused = 0;
+  let failed = 0;
+  let cacheWriteMs = 0;
+  let imageWallMs = 0;
+  let preprocessMs = 0;
+  let inferenceMs = 0;
+  let freshAdded = 0;
+  let reusedAdded = 0;
+  let fixtureCandidates = 0;
+  let fixtureAdded = 0;
+  const save = () => {
+    const started = now();
+    writeCache(cache);
+    cacheWriteMs += now() - started;
+  };
   const out: AnalyzedPhoto[] = [];
   let fresh = 0;
   let freshMs = 0;
   for (const p of photos) {
     if (isCancelled()) break;
+    const fixture = measured && FIXTURE_NAME.test(p.filename);
+    const added = fixture && p.filename.startsWith('EODIBENCH_NEW_');
+    if (fixture) fixtureCandidates += 1;
+    if (added) fixtureAdded += 1;
     const hit = cache.get(p.id);
     if (hit) {
+      reused += 1;
+      if (added) reusedAdded += 1;
       out.push({ ...p, topic: hit.topic, f: hit.f });
     } else {
+      const imageStarted = now();
       try {
-        const r = await analyzePhoto(m, p.uri, p.width, p.height);
+        const r = await analyzePhoto(m, p.uri, p.width, p.height, measured);
         const f = packVector(r.features);
         cache.set(p.id, { id: p.id, topic: r.topic, f });
         out.push({ ...p, topic: r.topic, f });
         fresh += 1;
+        if (added) freshAdded += 1;
+        preprocessMs += r.preprocessMs ?? 0;
+        inferenceMs += r.inferenceMs ?? 0;
         freshMs += r.ms;
-        if (fresh % SAVE_EVERY === 0) writeCache(cache);
+        imageWallMs += now() - imageStarted;
+        if (fresh % SAVE_EVERY === 0) save();
       } catch {
+        if (out[out.length - 1]?.id !== p.id) {
+          failed += 1;
+          imageWallMs += now() - imageStarted;
+        }
         // 읽을 수 없는 사진(지워짐, 형식 문제)은 건너뛴다
       }
     }
     onProgress(out.length, photos.length, fresh ? Math.round(freshMs / fresh) : null);
   }
-  if (fresh > 0) writeCache(cache);
+  if (fresh > 0) save();
+  if (measured)
+    benchmarkEvent('index', {
+      runId,
+      candidates: photos.length,
+      indexed: out.length,
+      fresh,
+      reused,
+      failed,
+      cacheEntriesBefore,
+      cacheReadMs,
+      cacheWriteMs,
+      imageWallMs,
+      imageReportedMs: freshMs,
+      preprocessMs,
+      inferenceMs,
+      freshAdded,
+      reusedAdded,
+      fixtureCandidates,
+      fixtureAdded,
+      cancelled: isCancelled(),
+    });
   return out;
 }
 

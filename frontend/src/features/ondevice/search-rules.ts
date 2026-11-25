@@ -59,6 +59,18 @@ export function groupSimilar(
   threshold: number,
 ): Map<string, string | null> {
   const parent = entries.map((_, i) => i);
+  // Packed embeddings can be exactly identical. Reuse their comparison while preserving union order.
+  const representatives = new Map<string, number>();
+  const frequency = new Array<number>(entries.length).fill(0);
+  const vectorIds = entries.map(({ f }, index) => {
+    const key = `${f.length}:${Array.prototype.join.call(f, ',')}`;
+    const existing = representatives.get(key);
+    const id = existing ?? index;
+    if (existing === undefined) representatives.set(key, id);
+    frequency[id] += 1;
+    return id;
+  });
+  const comparisons = new Map<number, boolean>();
   const root = (i: number): number => {
     while (parent[i] !== i) {
       parent[i] = parent[parent[i]];
@@ -68,11 +80,20 @@ export function groupSimilar(
   };
   for (let i = 0; i < entries.length; i++) {
     for (let j = i + 1; j < entries.length; j++) {
-      const a = entries[i].f;
-      const b = entries[j].f;
-      let s = 0;
-      for (let k = 0; k < a.length; k++) s += a[k] * b[k];
-      if (s >= threshold) parent[root(j)] = root(i);
+      const aId = vectorIds[i];
+      const bId = vectorIds[j];
+      const reusable = frequency[aId] > 1 || frequency[bId] > 1;
+      const key = aId * entries.length + bId;
+      let close = reusable ? comparisons.get(key) : undefined;
+      if (close === undefined) {
+        const a = entries[i].f;
+        const b = entries[j].f;
+        let s = 0;
+        for (let k = 0; k < a.length; k++) s += a[k] * b[k];
+        close = s >= threshold;
+        if (reusable) comparisons.set(key, close);
+      }
+      if (close) parent[root(j)] = root(i);
     }
   }
   const size = new Map<number, number>();

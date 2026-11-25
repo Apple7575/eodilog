@@ -1,0 +1,5 @@
+﻿"scenario","queryId","query","target","rank","inputToFrameMs","debounceMs","inferenceMs","rankMs","resultCount","orderedFixtureIds","network"
+"A","11","비빔밥","EODIBENCH_00001.jpg","1","693","480","98","10","3","EODIBENCH_00001.jpg|EODIBENCH_00011.jpg|EODIBENCH_00068.jpg","USB, normal radio settings"
+"B","7","비빔밥","EODIBENCH_00001.jpg","1","705","475","114","8","3","EODIBENCH_00001.jpg|EODIBENCH_00011.jpg|EODIBENCH_00068.jpg","USB, normal radio settings"
+"B","19","비빔밥","EODIBENCH_00001.jpg","1","543","386","108","8","3","EODIBENCH_00001.jpg|EODIBENCH_00011.jpg|EODIBENCH_00068.jpg","airplane mode and Wi-Fi off; USB retained"
+"C","3","카드키","EODIBENCH_NEW_00110.jpg","1","691","481","106","8","10","EODIBENCH_NEW_00110.jpg|EODIBENCH_00004.jpg|EODIBENCH_00061.jpg|EODIBENCH_00059.jpg|EODIBENCH_00038.jpg|EODIBENCH_00095.jpg|EODIBENCH_00013.jpg|EODIBENCH_00070.jpg|EODIBENCH_00012.jpg|EODIBENCH_00069.jpg","USB, normal radio settings"

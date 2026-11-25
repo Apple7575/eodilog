@@ -31,6 +31,14 @@
 | 휴대폰에서 사진 분류와 한국어 문장 검색 | SigLIP2 교사 모델의 분류와 이미지·문장 유사도를 작은 모델에 증류하고, 이미지 인코더는 int8, 문장 인코더는 4비트로 양자화했습니다. 모델을 **1,438MB → 191MB**로 줄였고, 학습에 쓰지 않은 평가 사진 1,931장 기준 **분류 정확도 97.4%**, **검색 Top-5 77.7–78.5%**를 기록했습니다. 분류 정답은 모델 판정이 일치한 라벨을 사용했습니다. [실험 리포트](ai/docs/reports/ondevice-photo-ai.md) |
 | 음성으로 공동 경비 초안 만들기 | 녹음을 받아쓰고 금액·결제자·분담 대상을 구조화합니다. 받아쓰기에서 근거를 확인할 수 있는 값을 사용하고, 사용자가 확인할 초안으로 반환합니다. [음성 경비 코드](ai/app/features/voice_expense) · [음성 여행 계획 실험](ai/docs/voice-trip-experiment.md) |
 
+## Android 실기기 검증
+
+Galaxy S22의 합성 사진 990장에서 정리 버튼을 누른 뒤 검색 준비까지 **319.02초 → 20.65초**가 걸렸습니다. 캐시를 남기고 앱을 다시 열었을 때 990장의 임베딩을 모두 재사용했습니다. 사진 10장을 추가한 실험에서는 새 사진만 인코딩했고, 총 1,000장 중 새 카드키 사진이 검색 1위였습니다.
+
+[단풍 검색 실기기 영상](portfolio-verification/android-cache/real-device/eodi-autumn-search.mp4) · [1,000장 검색 화면](portfolio-verification/android-cache/real-device/eodi-autumn-result.png) · [실측 보고서와 CSV](portfolio-verification/android-cache/real-device/REPORT.md)
+
+조건별로 한 번씩 측정한 개발 빌드 결과입니다. 모델 품질 수치와 실기기 지연의 측정 조건은 [포트폴리오 브리프](portfolio-verification/PORTFOLIO-BRIEF.md)에 정리했습니다.
+
 ## 시스템 구성
 
 ```mermaid

@@ -1,0 +1,654 @@
+{
+  "source": "592d2351",
+  "ort": "1.32.0",
+  "files": {
+    "photo_image_int8.onnx": {
+      "bytes": 102925949,
+      "sha256": "3b187751ccfac8c71545a4e8980e5b6ce8355bcc3bceeef410095cfe4878bda3"
+    },
+    "photo_text_w4_i32.onnx": {
+      "bytes": 97350690,
+      "sha256": "8735ac48b77acfa4157c084aca6abfe3b0e965b8b3776cc900ce544a8e36ba74"
+    },
+    "head.json": {
+      "bytes": 65983,
+      "sha256": "57ba41279d063d70b993282723d58e9c41e4d779f666c56aa7c83a57e974688c"
+    },
+    "tokenizer.json": {
+      "bytes": 1220249,
+      "sha256": "ad58d001ffee7c9696dba5653f6a77971cbc7f161426fbaaeee5d3c76a1f8a75"
+    }
+  },
+  "loadMs": 721.3,
+  "classification": [
+    {
+      "id": "f01",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 98.41
+    },
+    {
+      "id": "f02",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 63.41
+    },
+    {
+      "id": "f03",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 65.8
+    },
+    {
+      "id": "f04",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 62.76
+    },
+    {
+      "id": "f05",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 60.94
+    },
+    {
+      "id": "f06",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 67.46
+    },
+    {
+      "id": "f07",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 60.67
+    },
+    {
+      "id": "f08",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 66.7
+    },
+    {
+      "id": "f09",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 69.87
+    },
+    {
+      "id": "f10",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 69.99
+    },
+    {
+      "id": "f11-a",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 67.51
+    },
+    {
+      "id": "f11-b",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 63.06
+    },
+    {
+      "id": "f12-a",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 56.73
+    },
+    {
+      "id": "f12-b",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 64.03
+    },
+    {
+      "id": "f13",
+      "expected": "FOOD",
+      "predicted": "FOOD",
+      "ms": 62.0
+    },
+    {
+      "id": "l01",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 67.2
+    },
+    {
+      "id": "l02",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 63.45
+    },
+    {
+      "id": "l03",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 66.16
+    },
+    {
+      "id": "l04",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 71.4
+    },
+    {
+      "id": "l05",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 75.08
+    },
+    {
+      "id": "l06",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 66.57
+    },
+    {
+      "id": "l07",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 67.66
+    },
+    {
+      "id": "l08",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 77.67
+    },
+    {
+      "id": "l09",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 143.02
+    },
+    {
+      "id": "l10",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 135.56
+    },
+    {
+      "id": "l11-a",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 129.37
+    },
+    {
+      "id": "l11-b",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 118.86
+    },
+    {
+      "id": "l12-a",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 151.06
+    },
+    {
+      "id": "l12-b",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 141.44
+    },
+    {
+      "id": "l13",
+      "expected": "LANDSCAPE",
+      "predicted": "LANDSCAPE",
+      "ms": 128.43
+    },
+    {
+      "id": "o01",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 122.14
+    },
+    {
+      "id": "o02",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 128.03
+    },
+    {
+      "id": "o03",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 132.21
+    },
+    {
+      "id": "o04",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 131.18
+    },
+    {
+      "id": "o05",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 132.77
+    },
+    {
+      "id": "o06",
+      "expected": "OTHER",
+      "predicted": "LANDSCAPE",
+      "ms": 142.8
+    },
+    {
+      "id": "o07",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 137.64
+    },
+    {
+      "id": "o08",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 134.37
+    },
+    {
+      "id": "o09",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 118.61
+    },
+    {
+      "id": "o10",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 125.84
+    },
+    {
+      "id": "o11-a",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 127.95
+    },
+    {
+      "id": "o11-b",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 121.28
+    },
+    {
+      "id": "o12-a",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 118.22
+    },
+    {
+      "id": "o12-b",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 114.31
+    },
+    {
+      "id": "o13",
+      "expected": "OTHER",
+      "predicted": "OTHER",
+      "ms": 128.91
+    },
+    {
+      "id": "p01",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 125.8
+    },
+    {
+      "id": "p02",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 138.63
+    },
+    {
+      "id": "p03",
+      "expected": "PEOPLE",
+      "predicted": "LANDSCAPE",
+      "ms": 115.68
+    },
+    {
+      "id": "p04",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 143.39
+    },
+    {
+      "id": "p05",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 125.81
+    },
+    {
+      "id": "p06",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 137.8
+    },
+    {
+      "id": "p07",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 114.88
+    },
+    {
+      "id": "p08",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 106.27
+    },
+    {
+      "id": "p09",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 116.82
+    },
+    {
+      "id": "p10",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 115.38
+    },
+    {
+      "id": "p11-a",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 114.46
+    },
+    {
+      "id": "p11-b",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 149.35
+    },
+    {
+      "id": "p12-a",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 122.49
+    },
+    {
+      "id": "p12-b",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 129.19
+    },
+    {
+      "id": "p13",
+      "expected": "PEOPLE",
+      "predicted": "PEOPLE",
+      "ms": 155.5
+    }
+  ],
+  "search": [
+    {
+      "query": "바다 위로 지는 해",
+      "expected": [
+        "l11-a",
+        "l11-b"
+      ],
+      "desktopHarnessMs": 488.2,
+      "processingMs": 163.5,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "l11-b",
+          "l11-a",
+          "p01",
+          "p08",
+          "p03"
+        ],
+        "opened": [
+          "l11-b",
+          "l11-a"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      },
+      "current": {
+        "count": 5,
+        "top5": [
+          "l11-b",
+          "l11-a",
+          "p01",
+          "p08",
+          "p03"
+        ],
+        "opened": [
+          "l11-b",
+          "l11-a"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      }
+    },
+    {
+      "query": "그릇에 담긴 비빔밥",
+      "expected": [
+        "f04"
+      ],
+      "desktopHarnessMs": 462.7,
+      "processingMs": 163.4,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "f04",
+          "f11-b",
+          "f11-a",
+          "f10",
+          "f01"
+        ],
+        "opened": [
+          "f04"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      },
+      "current": {
+        "count": 2,
+        "top5": [
+          "f04",
+          "f11-b"
+        ],
+        "opened": [
+          "f04"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      }
+    },
+    {
+      "query": "벚꽃이 늘어선 길",
+      "expected": [
+        "l12-a",
+        "l12-b"
+      ],
+      "desktopHarnessMs": 463.4,
+      "processingMs": 162.9,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "l12-a",
+          "l12-b",
+          "o09",
+          "o06",
+          "l06"
+        ],
+        "opened": [
+          "l12-a",
+          "l12-b"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      },
+      "current": {
+        "count": 2,
+        "top5": [
+          "l12-a",
+          "l12-b"
+        ],
+        "opened": [
+          "l12-a",
+          "l12-b"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      }
+    },
+    {
+      "query": "가격이 적힌 식당 메뉴판",
+      "expected": [
+        "o04",
+        "o13"
+      ],
+      "desktopHarnessMs": 499.2,
+      "processingMs": 164.2,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "o04",
+          "o13",
+          "o01",
+          "o02",
+          "o08"
+        ],
+        "opened": [
+          "o04",
+          "o13"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      },
+      "current": {
+        "count": 2,
+        "top5": [
+          "o04",
+          "o13"
+        ],
+        "opened": [
+          "o04",
+          "o13"
+        ],
+        "firstCorrectRank": 1,
+        "unsupportedOnNegative": false
+      }
+    },
+    {
+      "query": "눈 위의 북극곰",
+      "expected": [],
+      "desktopHarnessMs": 516.1,
+      "processingMs": 159.0,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "p01",
+          "o02",
+          "o08",
+          "o01",
+          "p09"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      },
+      "current": {
+        "count": 3,
+        "top5": [
+          "p01",
+          "o02",
+          "o08"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      }
+    },
+    {
+      "query": "수중에서 헤엄치는 고래",
+      "expected": [],
+      "desktopHarnessMs": 500.9,
+      "processingMs": 175.2,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "f09",
+          "f02",
+          "p08",
+          "l10",
+          "p01"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      },
+      "current": {
+        "count": 1,
+        "top5": [
+          "f09"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      }
+    },
+    {
+      "query": "발사대에서 이륙하는 우주 로켓",
+      "expected": [],
+      "desktopHarnessMs": 429.4,
+      "processingMs": 138.0,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "p08",
+          "p06",
+          "o05",
+          "o03",
+          "p05"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      },
+      "current": {
+        "count": 1,
+        "top5": [
+          "p08"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      }
+    },
+    {
+      "query": "에펠탑 앞에 세워진 빨간 소방차",
+      "expected": [],
+      "desktopHarnessMs": 460.1,
+      "processingMs": 162.6,
+      "unfiltered": {
+        "count": 60,
+        "top5": [
+          "o08",
+          "l06",
+          "p02",
+          "p11-b",
+          "p09"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      },
+      "current": {
+        "count": 2,
+        "top5": [
+          "o08",
+          "l06"
+        ],
+        "opened": [],
+        "firstCorrectRank": null,
+        "unsupportedOnNegative": true
+      }
+    }
+  ]
+}

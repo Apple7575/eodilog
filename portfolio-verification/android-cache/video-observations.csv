@@ -1,0 +1,1 @@
+scenario,repetition,seededPhotos,runId,queryId,queryLabel,expectedFixture,observedRank,videoFile,screenMountFrame,firstGalleryPhotoFrame,searchReadyFrame,lastInputFrame,firstResultFrame,fps,inputToResultMs,network,notes

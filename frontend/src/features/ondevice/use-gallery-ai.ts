@@ -5,6 +5,8 @@ import NetInfo from '@react-native-community/netinfo';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { collapseGroups } from '../photo/photo-list-rules';
+import { benchmarkEnabled, benchmarkEvent } from './benchmark';
+import { MODEL_VERSION } from './model-spec';
 import { embedText, loadModels, type Models, type Topic } from './engine';
 import {
   analyzeGallery,
@@ -86,8 +88,19 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
   const [photos, setPhotos] = useState<AnalyzedPhoto[]>([]);
   const [topic, setTopic] = useState<GalleryTopicFilter>('ALL');
   const [rangeFilter, setRangeFilter] = useState<number | null>(null);
-  const [query, setQuery] = useState('');
-  const [queryVec, setQueryVec] = useState<{ q: string; v: Float32Array; ms: number } | null>(null);
+  const [query, setQueryState] = useState('');
+  const queryInput = useRef({ id: 0, at: 0 });
+  const benchmarkRun = useRef<number | undefined>(undefined);
+  const setQuery = useCallback((value: string) => {
+    if (benchmarkEnabled) queryInput.current = { id: queryInput.current.id + 1, at: Date.now() };
+    setQueryState(value);
+  }, []);
+  const [queryVec, setQueryVec] = useState<{
+    q: string;
+    v: Float32Array;
+    ms: number;
+    inputId: number;
+  } | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const cancelled = useRef(false);
@@ -112,7 +125,17 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
     setPhase('loading');
     const t0 = Date.now();
     const m = await getModels();
+    const galleryStarted = Date.now();
     const list = await tripGalleryPhotos(ranges ?? []);
+    if (benchmarkEnabled)
+      benchmarkEvent('gallery-list', {
+        runId: benchmarkRun.current,
+        candidates: list.length,
+        limited: permission.limited,
+        modelWaitMs: galleryStarted - t0,
+        galleryReadMs: Date.now() - galleryStarted,
+        ranges: ranges?.length ?? 0,
+      });
     setProgress({ done: 0, total: list.length });
     setPhase('analyzing');
     const t1 = Date.now();
@@ -124,8 +147,11 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
         setMsPerPhoto(ms);
       },
       () => cancelled.current,
+      benchmarkRun.current,
     );
     if (cancelled.current) return;
+    if (benchmarkEnabled)
+      benchmarkEvent('index-finished', { runId: benchmarkRun.current, indexed: analyzed.length });
     setPhotos(analyzed);
     setPhase('ready');
     // 폰 실측용 한 줄(logcat ReactNativeJS). 사진 내용은 남기지 않고 수와 시간만
@@ -141,9 +167,23 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
       cancelled.current = false;
       void (async () => {
         try {
+          if (benchmarkEnabled) {
+            benchmarkRun.current = Date.now();
+            benchmarkEvent('index-start', {
+              runId: benchmarkRun.current,
+              download,
+              modelVersion: MODEL_VERSION,
+            });
+          }
           if (download) {
             setPhase('downloading');
+            const downloadStarted = Date.now();
             await downloadModels((done, total) => setProgress({ done, total }));
+            if (benchmarkEnabled)
+              benchmarkEvent('model-download', {
+                runId: benchmarkRun.current,
+                ms: Date.now() - downloadStarted,
+              });
           }
           await analyze();
         } catch {
@@ -184,15 +224,27 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
     const q = query.trim();
     if (!q || phase !== 'ready') return;
     let stop = false;
+    const input = queryInput.current;
     const timer = setTimeout(() => {
+      const debounceMs = benchmarkEnabled ? Date.now() - input.at : 0;
       void getModels()
         .then((m) => embedText(m, q))
         .then(({ embedding, ms }) => {
           if (stop) return;
-          setQueryVec({ q, v: embedding, ms });
+          if (benchmarkEnabled)
+            benchmarkEvent('query-inferred', {
+              runId: benchmarkRun.current,
+              queryId: input.id,
+              debounceMs,
+              inferenceMs: ms,
+            });
+          setQueryVec({ q, v: embedding, ms, inputId: input.id });
           console.log(`ONDEV_RESULT ${JSON.stringify({ kind: 'query', ms })}`);
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!stop && benchmarkEnabled)
+            benchmarkEvent('query-error', { runId: benchmarkRun.current, queryId: input.id });
+        });
     }, 300);
     return () => {
       stop = true;
@@ -200,19 +252,29 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
     };
   }, [query, phase]);
 
-  const groups = useMemo(() => groupSimilar(photos, SIMILAR_THRESHOLD), [photos]);
+  const { groups, groupMs } = useMemo(() => {
+    // The opt-in clock is reported after commit and never affects grouping or rendering.
+    /* eslint-disable react-hooks/purity */
+    const started = benchmarkEnabled ? Date.now() : 0;
+    const groups = groupSimilar(photos, SIMILAR_THRESHOLD);
+    return { groups, groupMs: benchmarkEnabled ? Date.now() - started : 0 };
+    /* eslint-enable react-hooks/purity */
+  }, [photos]);
   const inRange = useMemo(
     () => (rangeFilter === null ? photos : photos.filter((p) => p.rangeIndex === rangeFilter)),
     [photos, rangeFilter],
   );
   const counts = useMemo(() => topicCounts(inRange), [inRange]);
 
-  const tiles = useMemo((): GalleryTile[] => {
+  const { tiles, rankMs } = useMemo((): { tiles: GalleryTile[]; rankMs: number } => {
     const inTopic = topic === 'ALL' ? inRange : inRange.filter((p) => p.topic === topic);
     const q = query.trim();
     if (q && queryVec?.q === q) {
+      // The opt-in clock is reported after commit and never affects search results.
+      /* eslint-disable react-hooks/purity */
+      const rankStarted = benchmarkEnabled ? Date.now() : 0;
       const byId = new Map(inTopic.map((p) => [p.id, p]));
-      return relevantOnly(
+      const ranked = relevantOnly(
         rankBySimilarity(queryVec.v, inTopic, SEARCH_LIMIT),
         SEARCH_RELATIVE_MIN,
       ).flatMap((r) => {
@@ -221,17 +283,60 @@ export function useGalleryAi({ ranges, aiMode }: GallerySource) {
           ? [{ photo, groupSize: 1, expanded: false, groupKey: null, score: r.score }]
           : [];
       });
+      return { tiles: ranked, rankMs: benchmarkEnabled ? Date.now() - rankStarted : 0 };
+      /* eslint-enable react-hooks/purity */
     }
     // 검색어가 없으면 찍은 순서로, 비슷한 사진은 대표 한 장으로 접는다(펼친 묶음은 모두)
     const ordered = [...inTopic].sort((a, b) => a.takenAt - b.takenAt);
-    return collapseGroups(ordered, (p) => groups.get(p.id) ?? null, expanded).map((t) => ({
-      photo: t.item,
-      groupSize: t.groupSize,
-      expanded: t.expanded,
-      groupKey: t.groupKey,
-      score: null,
-    }));
+    return {
+      rankMs: 0,
+      tiles: collapseGroups(ordered, (p) => groups.get(p.id) ?? null, expanded).map((t) => ({
+        photo: t.item,
+        groupSize: t.groupSize,
+        expanded: t.expanded,
+        groupKey: t.groupKey,
+        score: null,
+      })),
+    };
   }, [inRange, topic, query, queryVec, groups, expanded]);
+
+  const readyLogged = useRef<number | null>(null);
+  const queryLogged = useRef<string | null>(null);
+  useEffect(() => {
+    if (!benchmarkEnabled || phase !== 'ready' || !benchmarkRun.current) return;
+    const runId = benchmarkRun.current;
+    const q = query.trim();
+    const input = queryInput.current;
+    if (q && (queryVec?.q !== q || queryVec.inputId !== input.id)) return;
+    const frame = requestAnimationFrame(() => {
+      if (q) {
+        const key = `${runId}:${input.id}`;
+        if (queryLogged.current === key) return;
+        queryLogged.current = key;
+        benchmarkEvent('query-frame', {
+          runId,
+          queryId: input.id,
+          inputToFrameMs: Date.now() - input.at,
+          rankMs,
+          resultCount: tiles.length,
+          results: tiles.flatMap(({ photo, score }, index) =>
+            /^EODIBENCH_(?:(?:BASE|NEW)_)?\d{4,5}\.jpg$/i.test(photo.filename)
+              ? [[index + 1, photo.filename, score === null ? null : Number(score.toFixed(6))]]
+              : [],
+          ),
+        });
+      } else if (readyLogged.current !== runId) {
+        readyLogged.current = runId;
+        benchmarkEvent('ready-frame', {
+          runId,
+          indexed: photos.length,
+          tileCount: tiles.length,
+          groupMs,
+        });
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [phase, photos.length, query, queryVec, rankMs, tiles, groupMs]);
 
   const toggle = useCallback(
     (id: string) =>

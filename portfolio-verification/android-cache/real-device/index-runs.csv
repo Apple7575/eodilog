@@ -1,0 +1,4 @@
+﻿"scenario","repeat","candidates","indexed","fresh","reused","freshAdded","cacheEntriesBefore","screenToReadyMs","indexStartToReadyMs","indexStartToFinishMs","modelWaitMs","galleryReadMs","cacheReadMs","cacheWriteMs","preprocessMs","imageInferenceMs","groupMs","tileCount","sampledPeakPssKiB","pssSamples"
+"A","1","100","100","100","0","0","0","32801","26339","25748","775","150","2","25","20016.22","4641.05","133","49","1004985","22"
+"B","1","100","100","0","100","0","100","2528","1593","970","779","157","17","0","0","0","109","49","878265","2"
+"C","1","110","110","10","100","10","100","4991","4017","3398","747","172","12","10","2007.45","421.96","168","50","904423","3"

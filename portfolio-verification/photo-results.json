@@ -1,0 +1,835 @@
+{
+  "source": "592d2351",
+  "cases": [
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f02",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f03",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f04",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f05",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f06",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f07",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f08",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f09",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f10",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f11-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": "group-2",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f11-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": "group-3",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f12-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": "group-4",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f12-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": "group-5",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f13",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l02",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l03",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l04",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l05",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l06",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l07",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l08",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l09",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l10",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l11-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": "group-1",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l11-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": "group-2",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l12-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": "group-3",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l12-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": "group-4",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "LANDSCAPE",
+      "output": {
+        "photoId": "l13",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o02",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o03",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o04",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o05",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o06",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o07",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o08",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o09",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o10",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o11-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": "group-0",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o11-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": "group-1",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o12-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": "group-2",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o12-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": "group-3",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "OTHER",
+      "output": {
+        "photoId": "o13",
+        "status": "SUCCEEDED",
+        "topics": [
+          "OTHER"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p02",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p03",
+        "status": "SUCCEEDED",
+        "topics": [
+          "LANDSCAPE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p04",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p05",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p06",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p07",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p08",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p09",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p10",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p11-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p11-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p12-a",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": "group-1",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p12-b",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": "group-2",
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "PEOPLE",
+      "output": {
+        "photoId": "p13",
+        "status": "SUCCEEDED",
+        "topics": [
+          "PEOPLE"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    }
+  ],
+  "demo": [
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "INVALID_IMAGE",
+      "output": {
+        "photoId": "bad-01",
+        "status": "FAILED",
+        "topics": [],
+        "groupId": null,
+        "errorCode": "IMAGE_DECODE_FAILED"
+      }
+    }
+  ],
+  "warmDemo": [
+    {
+      "expected": "FOOD",
+      "output": {
+        "photoId": "f01",
+        "status": "SUCCEEDED",
+        "topics": [
+          "FOOD"
+        ],
+        "groupId": null,
+        "errorCode": null
+      }
+    },
+    {
+      "expected": "INVALID_IMAGE",
+      "output": {
+        "photoId": "bad-01",
+        "status": "FAILED",
+        "topics": [],
+        "groupId": null,
+        "errorCode": "IMAGE_DECODE_FAILED"
+      }
+    }
+  ],
+  "timings": [
+    {
+      "run": "cold mixed request",
+      "items": 2,
+      "httpStatus": 200,
+      "ms": 32254.8
+    },
+    {
+      "run": "batch 1",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 2114.7
+    },
+    {
+      "run": "batch 2",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 1826.3
+    },
+    {
+      "run": "batch 3",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 2170.0
+    },
+    {
+      "run": "batch 4",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 1951.4
+    },
+    {
+      "run": "batch 5",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 1908.4
+    },
+    {
+      "run": "batch 6",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 1928.2
+    },
+    {
+      "run": "batch 7",
+      "items": 8,
+      "httpStatus": 200,
+      "ms": 2049.7
+    },
+    {
+      "run": "batch 8",
+      "items": 4,
+      "httpStatus": 200,
+      "ms": 1026.8
+    },
+    {
+      "run": "warm mixed request",
+      "items": 2,
+      "httpStatus": 200,
+      "ms": 329.4
+    }
+  ]
+}

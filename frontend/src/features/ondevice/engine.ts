@@ -98,21 +98,39 @@ function toChw(rgba: Uint8Array): Float32Array {
   return out;
 }
 
-export type PhotoResult = { features: Float32Array; topic: Topic; scores: number[]; ms: number };
+export type PhotoResult = {
+  features: Float32Array;
+  topic: Topic;
+  scores: number[];
+  ms: number;
+  preprocessMs?: number;
+  inferenceMs?: number;
+};
 
 export async function analyzePhoto(
   m: Models,
   uri: string,
   width: number,
   height: number,
+  measure = false,
 ): Promise<PhotoResult> {
   const t0 = Date.now();
+  const preprocessStart = measure ? performance.now() : 0;
   const pixels = await preprocess(uri, width, height);
+  const inferenceStart = measure ? performance.now() : 0;
   const out = await m.image.run({ pixels: new Tensor('float32', pixels, [1, 3, SIZE, SIZE]) });
+  const inferenceMs = measure ? performance.now() - inferenceStart : undefined;
   const features = normalize(out.features.data as Float32Array);
   const scores = m.head.W.map((w, k) => (dot(features, w) + m.head.B[k]) * m.head.scale);
   const best = scores.indexOf(Math.max(...scores));
-  return { features, topic: m.head.topics[best] as Topic, scores, ms: Date.now() - t0 };
+  return {
+    features,
+    topic: m.head.topics[best] as Topic,
+    scores,
+    ms: Date.now() - t0,
+    preprocessMs: measure ? inferenceStart - preprocessStart : undefined,
+    inferenceMs,
+  };
 }
 
 export async function embedText(
