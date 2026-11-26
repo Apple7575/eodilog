@@ -1,81 +1,353 @@
-# 어디로그 EodiLog
+# 어디로그: 링크로 모으고 투표로 정해 함께 짜는 그룹 여행 앱
 
-**친구들과 장소를 모으고, 투표로 결정하고, 함께 일정을 짜는 Android 여행 앱.**
+<p align="center">
+  <img src="frontend/assets/images/icon.png" alt="어디로그 (EodiLog)" width="160">
+</p>
 
-6인 팀 프로젝트 · 2026.10–2026.11
+> 6인 팀 프로젝트 · 2026.10 – 2026.11
 
-단체 채팅에 묻히는 맛집 링크부터 여행 후 사진과 정산까지, 여행 전후에 흩어지는 작업을 하나의 여행 공간에 모았습니다.
+친구들과 여행 한 번을 준비하면서 생기는 **장소 모으기, 여행지 정하기, 코스 짜기, 사진과 경비 정리**를 한 앱에서 끝내는 서비스입니다.
 
-| 장소와 여행 탐색 | 동행 투표 | 날짜별 코스 |
-|:---:|:---:|:---:|
-| <img src="docs/images/screens/home.png" width="220" alt="여행 탐색 홈 화면"> | <img src="docs/images/screens/poll.png" width="220" alt="동행 투표 화면"> | <img src="docs/images/screens/course.png" width="220" alt="날짜별 코스 화면"> |
+- **여행 만든 사람**: 여행을 만들고 링크 하나로 친구를 초대, 날짜와 여행지를 정함
+- **동행**: 링크·캡처로 장소를 담고 투표하고, 누구나 코스를 고치고 적용함
+- **여행이 끝나면**: 사진은 주제별로 정리되고, 누가 얼마를 냈는지 적으면 정산 금액이 나옴
 
-화면은 앱의 테스트 데이터로 촬영한 웹 미리보기입니다. 지도 타일은 네이티브 앱에서 표시됩니다.
+---
 
-## 여행 흐름
+## 화면
 
-| 단계 | 할 수 있는 일 |
-| --- | --- |
-| 모으기 | 초대 링크로 동행을 모으고, 링크와 캡처에서 찾은 장소를 개인 또는 그룹 보관함에 담습니다. |
-| 정하기 | 동행이 저장한 장소와 여행 취향을 바탕으로 후보를 추천받고, 투표로 여행지와 방문 장소를 결정합니다. |
-| 함께 짜기 | 저장한 장소로 날짜별 코스를 제안받고 동행과 수정합니다. 여행 중에는 날씨 대안과 준비물도 확인할 수 있습니다. |
-| 남기기 | 사진을 주제별로 정리하고 문장으로 검색합니다. 공동 경비를 기록하면 인원별 정산 금액을 계산합니다. |
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/images/screens/home.png" width="220" alt="홈"><br><b>홈</b><br><sub>친구들이 다녀온 여행을 지역별로 모은 지도</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/trips.png" width="220" alt="여행"><br><b>여행</b><br><sub>진행 중인 여행과 다음 계획</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/trip-detail.png" width="220" alt="여행 상세"><br><b>여행 상세</b><br><sub>오늘 할 일과 여행 메뉴</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/images/screens/preferences.png" width="220" alt="여행 취향"><br><b>여행 취향</b><br><sub>추천에 쓸 취향 고르기</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/recommend.png" width="220" alt="여행지 추천"><br><b>여행지 추천</b><br><sub>동행이 담은 곳과 취향으로 추천</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/poll.png" width="220" alt="투표"><br><b>투표</b><br><sub>여러 곳에 투표, 마감되면 자동 확정</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/images/screens/course.png" width="220" alt="코스"><br><b>코스</b><br><sub>날짜별 코스와 구간 이동 수단</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/chat.png" width="220" alt="그룹 채팅"><br><b>그룹 채팅</b><br><sub>투표·코스 소식이 카드로</sub></td>
+    <td align="center" width="33%"><img src="docs/images/screens/on-trip.png" width="220" alt="여행 중"><br><b>여행 중</b><br><sub>날씨, 날씨 대안, 준비물, 오늘 코스</sub></td>
+  </tr>
+</table>
 
-## AI 포트폴리오 · 장수철
+> 서버 없이 도는 앱 안의 테스트 데이터로 찍은 화면입니다. 웹 미리보기라 지도 타일은 앱에서만 보입니다.
 
-팀에서 AI를 담당했습니다. FastAPI 기반 기능 API와 Spring 백엔드 간 연동 계약을 설계하고, 장소 추출·사진 분류 평가와 온디바이스 모델 경량화, 음성 입력 기능을 개발했습니다.
+## 1. Introduction
 
-| 과제 | 구현과 검증 |
-| --- | --- |
-| 링크·캡처의 장소를 지도 후보로 연결 | 모델은 입력에서 장소명과 단서를 추출하고, 지역 검색 결과를 장소 후보로 연결합니다. 합성 캡처 50장 평가에서 장소명 재현율은 **93.1–95.4%**였습니다. 이 수치는 장소 검색을 끈 추출 단계 기준이며 두 번의 실행에서 화면 오독이 총 5건 발생했습니다. [평가 리포트](ai/docs/reports/capture-eval.md) |
-| 휴대폰에서 사진 분류와 한국어 문장 검색 | SigLIP2 교사 모델의 분류와 이미지·문장 유사도를 작은 모델에 증류하고, 이미지 인코더는 int8, 문장 인코더는 4비트로 양자화했습니다. 모델을 **1,438MB → 191MB**로 줄였고, 학습에 쓰지 않은 평가 사진 1,931장 기준 **분류 정확도 97.4%**, **검색 Top-5 77.7–78.5%**를 기록했습니다. 분류 정답은 모델 판정이 일치한 라벨을 사용했습니다. [실험 리포트](ai/docs/reports/ondevice-photo-ai.md) |
-| 음성으로 공동 경비 초안 만들기 | 녹음을 받아쓰고 금액·결제자·분담 대상을 구조화합니다. 받아쓰기에서 근거를 확인할 수 있는 값을 사용하고, 사용자가 확인할 초안으로 반환합니다. [음성 경비 코드](ai/app/features/voice_expense) · [음성 여행 계획 실험](ai/docs/voice-trip-experiment.md) |
+친구들과 여행을 준비하면 늘 같은 곳에서 막힙니다. 단톡방에 올린 맛집 링크는 대화에 묻히고, 다 좋다고 하는데 아무도 여행지를 정하지 않고, 일정표는 한 사람만 적고, 여행이 끝나면 사진은 흩어지고 정산은 몇 주째 미뤄집니다.
 
-## Android 실기기 검증
+**어디로그**는 이 과정을 **모으기 → 정하기 → 짜기 → 남기기** 하나의 흐름으로 묶습니다. 링크와 캡처에서 장소를 찾아 지도에 담고, 투표로 정하고, 모은 장소로 코스를 추천받아 함께 고치고, 여행이 끝나면 사진과 경비를 정리합니다.
 
-Galaxy S22의 합성 사진 990장에서 정리 버튼을 누른 뒤 검색 준비까지 **319.02초 → 20.65초**가 걸렸습니다. 캐시를 남기고 앱을 다시 열었을 때 990장의 임베딩을 모두 재사용했습니다. 사진 10장을 추가한 실험에서는 새 사진만 인코딩했고, 총 1,000장 중 새 카드키 사진이 검색 1위였습니다.
+- 앱은 Android(Expo)이고, 소개·초대·카카오 로그인 콜백만 웹으로 둡니다.
+- AI는 **무엇을 넣으면 무엇이 나오는지가 분명한 곳**에만 씁니다. 사실을 지어내거나 사용자가 확정한 데이터를 몰래 덮어쓰지 않습니다.
 
-[단풍 검색 실기기 영상](portfolio-verification/android-cache/real-device/eodi-autumn-search.mp4) · [1,000장 검색 화면](portfolio-verification/android-cache/real-device/eodi-autumn-result.png) · [실측 보고서와 CSV](portfolio-verification/android-cache/real-device/REPORT.md)
+## 2. Key Features
 
-조건별로 한 번씩 측정한 개발 빌드 결과입니다. 모델 품질 수치와 실기기 지연의 측정 조건은 [포트폴리오 브리프](portfolio-verification/PORTFOLIO-BRIEF.md)에 정리했습니다.
+| 도메인 | 설명 |
+|---|---|
+| 회원 / 인증 | 카카오 로그인(PKCE), JWT 인가, 프로필과 여행 취향 입력 |
+| 여행 / 동행 | 여행 만들기, 카카오톡 초대 링크, 앱 안에서 맞팔 친구 초대, 나가기와 방장 위임 |
+| **장소 모으기** | 영상·블로그 **링크와 캡처에서 장소를 찾아** 지도에 담기, 내 저장과 그룹 저장, 겹친 곳 모아 보기 |
+| 투표 | 지역 투표와 장소 투표, 마감 시간에 자동 확정, 결과를 채팅방에 카드로 |
+| **코스** | 모은 장소로 **날짜별 코스 자동 추천**, 직접 만들기, 구간별 이동 수단과 시간, 동행과 함께 고치기 |
+| 코스 변경안 | 장소를 빼면 남은 일정을 AI가 다시 짜서 전후 비교, 적용 직후 한 번 되돌리기 |
+| **말로 입력** | 날짜와 가고 싶은 곳을 쭉 말하면 **날마다 나뉜 여행 초안**, 여러 지출을 한 번에 말로 기록 |
+| 여행 중 | 오늘 코스, 날씨와 날씨 대안, 준비물 체크, 근처 화장실·충전소 찾기, 다녀왔어요 기록 |
+| **사진** | 업로드한 사진 주제 분류와 비슷한 사진 묶기, **폰 안에서 한국어 문장으로 사진 찾기** |
+| 경비 / 정산 | 지출 입력, 나눌 사람 지정, 정산 금액 계산 |
+| 기록 | 방문한 곳 별점과 한 줄 평, 타임라인, 여행 요약 카드, 친구에게 공개 |
+| 홈 / 탐색 | 친구들이 다녀온 여행을 지역별로 보여 주는 지도, 요즘 뜨는 여행지 |
+| 채팅 / 알림 | 여행마다 그룹 채팅, 투표·변경안·동행 참여 알림 |
 
-## 시스템 구성
+## 3. Tech Stack
+
+| 분류 | 기술 |
+|---|---|
+| Mobile | <img src="https://img.shields.io/badge/Expo_58-000020?style=flat-square&logo=expo&logoColor=white"> <img src="https://img.shields.io/badge/React_Native_0.88-61DAFB?style=flat-square&logo=react&logoColor=black"> <img src="https://img.shields.io/badge/TypeScript_6.0-3178C6?style=flat-square&logo=typescript&logoColor=white"> <img src="https://img.shields.io/badge/Expo_Router-000020?style=flat-square&logo=expo&logoColor=white"> <img src="https://img.shields.io/badge/TanStack_Query-FF4154?style=flat-square&logo=reactquery&logoColor=white"> <img src="https://img.shields.io/badge/Zustand-443E38?style=flat-square&logo=react&logoColor=white"> <img src="https://img.shields.io/badge/ONNX_Runtime-005CED?style=flat-square&logo=onnx&logoColor=white"> |
+| Web | <img src="https://img.shields.io/badge/React_19-61DAFB?style=flat-square&logo=react&logoColor=black"> <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white"> |
+| Backend | <img src="https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=openjdk&logoColor=white"> <img src="https://img.shields.io/badge/Spring_Boot_4.1-6DB33F?style=flat-square&logo=springboot&logoColor=white"> <img src="https://img.shields.io/badge/Spring_Security-6DB33F?style=flat-square&logo=springsecurity&logoColor=white"> <img src="https://img.shields.io/badge/JPA-59666C?style=flat-square&logo=hibernate&logoColor=white"> <img src="https://img.shields.io/badge/Flyway-CC0200?style=flat-square&logo=flyway&logoColor=white"> <img src="https://img.shields.io/badge/STOMP_WebSocket-010101?style=flat-square&logo=socketdotio&logoColor=white"> |
+| AI | <img src="https://img.shields.io/badge/Python_3.11-3776AB?style=flat-square&logo=python&logoColor=white"> <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white"> <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white"> <img src="https://img.shields.io/badge/SigLIP2-4285F4?style=flat-square&logo=google&logoColor=white"> <img src="https://img.shields.io/badge/OpenAI_호환_LLM·STT-412991?style=flat-square&logo=openai&logoColor=white"> |
+| Database / Storage | <img src="https://img.shields.io/badge/PostgreSQL_17-4169E1?style=flat-square&logo=postgresql&logoColor=white"> <img src="https://img.shields.io/badge/PostGIS_3.5-336791?style=flat-square&logo=postgresql&logoColor=white"> <img src="https://img.shields.io/badge/Amazon_S3-569A31?style=flat-square&logo=amazons3&logoColor=white"> |
+| Infra / CI-CD | <img src="https://img.shields.io/badge/Docker_Compose-2496ED?style=flat-square&logo=docker&logoColor=white"> <img src="https://img.shields.io/badge/nginx-009639?style=flat-square&logo=nginx&logoColor=white"> <img src="https://img.shields.io/badge/Jenkins-D24939?style=flat-square&logo=jenkins&logoColor=white"> <img src="https://img.shields.io/badge/AWS_EC2_(ARM64)-FF9900?style=flat-square&logo=amazonec2&logoColor=white"> <img src="https://img.shields.io/badge/EAS_Build-000020?style=flat-square&logo=expo&logoColor=white"> |
+| External API | 카카오 로그인 · 네이버 지도 / 지역 검색 · 기상청 단기예보 · 한국관광공사 |
+
+## 4. Usage
+
+비밀 값은 저장소에 없습니다. 폴더마다 있는 `.env.example`을 복사해 `.env`를 만들고 값을 채웁니다.
+
+```bash
+# 앱 (frontend/)
+cd frontend
+npm ci
+cp .env.example .env          # 서버 없이 화면만 보려면 EXPO_PUBLIC_DEV_MOCK=true
+npm run build:android         # 처음 한 번: 개발 빌드 설치 (Expo Go 아님)
+npm start
+
+# 백엔드 (EodiLog/) — Java 25, Docker 필요
+cd EodiLog
+cp .env.example .env
+docker compose up -d          # PostgreSQL 17 + PostGIS
+./gradlew bootRun --args='--spring.profiles.active=local'
+
+# AI 서버 (ai/) — Python 3.11, uv 필요
+cd ai
+cp .env.example .env
+uv sync --group dev           # 사진 모델까지: uv sync --extra vision
+uv run uvicorn app.main:app --reload
+```
+
+- Windows에서는 **짧은 영문 경로**(예: `C:\dev\eodilog`)에 클론합니다. 경로가 길거나 한글이 있으면 Android 네이티브 빌드가 260자 제한에 걸립니다.
+- 운영 배포 순서는 [`deploy/README.md`](deploy/README.md)에 있습니다.
+
+## 5. Directory Structure
+
+```
+eodilog/
+├── frontend/                 # ⭐ Android 앱 (Expo + React Native)
+│   ├── src/app/                # 화면 100개 (Expo Router, 파일 하나가 화면 하나)
+│   ├── src/features/           # 기능별 폴더: trip, course, poll, chat, expense, photo, ondevice, voice-trip …
+│   ├── src/api/                # API 클라이언트 + 서버 없이 도는 가짜 서버(dev-mock)
+│   ├── plugins/                # Expo 설정 플러그인 (네이티브 빌드 보정)
+│   └── specs/                  # 기능별 명세와 작업 목록
+├── EodiLog/                  # ⭐ 백엔드 (Spring Boot)
+│   ├── src/main/java/com/ssafy/a204/EodiLog/
+│   │   ├── trip/ invitation/     # 여행, 동행, 초대
+│   │   ├── place/ region/        # 장소, 지역 (PostGIS)
+│   │   ├── itinerary/ poll/      # 코스, 투표
+│   │   ├── chat/ notification/   # 채팅(STOMP), 알림
+│   │   ├── expense/ photo/       # 경비·정산, 사진
+│   │   ├── job/                  # ⭐ PostgreSQL 기반 비동기 작업 큐
+│   │   └── extraction/ recommendation/ voicetrip/ …  # AI 서버 연동
+│   └── src/main/resources/db/  # Flyway 마이그레이션 59개
+├── ai/                       # ⭐ AI 서버 (FastAPI)
+│   ├── app/features/           # 장소 추출, 추천, 코스 제안, 사진 분류, 날씨 대안, 말로 입력 …
+│   ├── scripts/ondevice/       # 폰용 사진 모델 학습·줄이기
+│   ├── eval_data/              # 기능별 평가 세트
+│   └── docs/reports/           # 평가 보고서
+├── landing-src/              # 소개 · 초대 · 카카오 로그인 콜백 웹 (Vite)
+├── landing/                  # 빌드된 정적 웹
+├── deploy/                   # 운영 배포: Compose, nginx, Jenkins, 배포 스크립트
+├── docs/                     # 기획, 화면 목록과 흐름, API 명세, ERD, 결정 기록
+└── portfolio-verification/   # 실기기 계측, 평가 결과와 시연 영상
+```
+
+## 6. Architecture
 
 ```mermaid
 flowchart LR
-    App[Expo Android 앱] --> API[Spring Boot API]
-    App --> Device[ONNX Runtime 사진 분류·검색]
-    API --> DB[(PostgreSQL · PostGIS)]
-    API --> S3[(Amazon S3)]
-    API --> AI[FastAPI AI 서비스]
-    AI --> Services[LLM · STT · 장소 검색]
+    subgraph Client["클라이언트"]
+        App["Android 앱<br/>Expo · React Native<br/>폰 안 사진 모델(ONNX)"]
+        Web["소개 · 초대 웹<br/>Vite · React"]
+    end
+
+    Front["앞단 nginx<br/>HTTPS · 정적 웹"]
+
+    subgraph Server["백엔드 서버 · Docker Compose · ARM64"]
+        Proxy["nginx"]
+        BE["백엔드<br/>Spring Boot"]
+        AI["AI 서버<br/>FastAPI"]
+        DB[("PostgreSQL 17<br/>+ PostGIS")]
+    end
+
+    S3[("S3<br/>사진 · 캡처")]
+
+    subgraph External["외부 서비스"]
+        Kakao["카카오 로그인"]
+        Naver["네이버 지도 · 지역 검색"]
+        Gov["기상청 · 관광공사"]
+        LLM["LLM · STT"]
+    end
+
+    App -- "REST · STOMP" --> Front
+    Web --> Front
+    Front -- "/api · /ws" --> Proxy
+    Proxy --> BE
+    BE -- "작업(Job) 실행" --> AI
+    BE --> DB
+    BE -- "미리 서명한 주소" --> S3
+    App -- "직접 업로드" --> S3
+    BE --> Kakao
+    BE --> Gov
+    AI --> Naver
+    AI --> LLM
+    App --> Naver
 ```
 
-- 모바일은 React Native, Expo Router, TypeScript, TanStack Query, Zustand를 사용합니다. 소개·초대 페이지는 React와 Vite로 구성했습니다.
-- 백엔드는 Spring Security, JPA, Flyway와 STOMP WebSocket을 사용합니다. 오래 걸리는 AI 요청은 PostgreSQL 작업 큐에 등록하고, 앱은 작업 ID로 상태를 조회합니다. [작업 큐 설계](EodiLog/docs/plan/jobs-foundation.md)
-- AI 서비스는 기능별 입력·출력과 상태를 정의합니다. 좌표와 이동 시간은 지도·경로 API 결과를 사용하고, 장소와 일정 변경안은 사용자가 확인한 뒤 적용합니다. [AI API 명세](ai/docs/spec.md)
+- **앱 ↔ 서버**: 일반 요청은 REST, 채팅은 STOMP(WebSocket)로 받습니다. 실시간은 최선 노력이고 **REST가 기준**입니다. 끊겼다 붙으면 앱이 REST로 빈 구간을 다시 받습니다.
+- **AI는 백엔드 뒤에 있습니다**: 앱은 AI 서버에 직접 닿지 않습니다. 백엔드가 권한을 확인하고, 허용된 데이터만 작업(Job)으로 넘깁니다.
+- **사진은 앱이 S3에 바로 올립니다**: 백엔드는 미리 서명한 주소만 발급하고, 원본 바이트는 서버를 거치지 않습니다.
+- 데이터 구조와 API는 [`docs/erd.dbml`](docs/erd.dbml), [`docs/api-spec.md`](docs/api-spec.md)를 참고하세요.
 
-## 로컬에서 살펴보기
+## 7. 폰 안 사진 AI — 서버로 보내지 않고 정리하고 찾는다
 
-**앱 화면 미리보기**는 `frontend/`에서 아래 순서로 실행합니다. `.env`에 `EXPO_PUBLIC_DEV_MOCK=true`를 설정하면 서버 없이 테스트 데이터로 주요 흐름을 볼 수 있습니다. 실제 Android 동작은 개발 빌드에서 확인합니다. [프론트엔드 설정](frontend/README.md)
+여행 기간에 찍은 내 폰 사진을 **폰에서** 주제별로 나누고, 비슷한 사진을 묶고, "해운대에서 먹은 회"처럼 **한국어 문장으로 찾습니다.**
 
-```bash
-cd frontend
-npm ci
-cp .env.example .env
-npm run build:android
-npm start
+### 7.1 왜 폰에서 하나
+
+- **개인정보**: 여행 사진에는 얼굴, 위치, 영수증이 담깁니다. 분석하려고 서버로 보낼 이유가 없습니다.
+- **여행지에는 와이파이가 없다**: 찍은 자리에서 인터넷 없이 바로 나누고 찾습니다. 비행기 모드에서도 분류와 검색이 됩니다.
+- **전송량**: 4,000px 원본 50장은 약 118MB입니다. 폰에서 하면 분석 때문에 나가는 데이터는 0입니다.
+
+### 7.2 큰 모델을 폰 크기로 — 성능은 그대로, 크기는 1/22
+
+큰 선생 모델(SigLIP2 SO400M)을 먼저 분류와 한국어 설명 검색으로 학습하고, 폰 크기 모델(SigLIP2 B-32)이 선생의 판단과 문장-사진 유사도를 따라 하도록 함께 학습했습니다. 그다음 사진 모델은 8비트 흉내 학습 뒤 int8로, 문장 모델은 단어표를 21,975개로 줄인 뒤 4비트로 바꿨습니다.
+
+| 단계 | 크기 | 주제 분류 | 문장 검색 (정답 5위 안) |
+|---|---:|---:|---:|
+| 큰 선생 SO400M | 4,334 MB | 97.77% | 78.5% |
+| B-32 학습 후, 줄이기 전 | 1,438 MB | 97.31% | 79.0% |
+| **폰용 최종** (사진 int8 + 문장 4비트) | **191 MB** | **97.41%** | **78.5%** |
+
+> 평가 사진 1,931장(학습에 쓰지 않음). 학습 전 원본 모델은 분류 74.6%, 검색 52.1%였습니다. 정답 주제는 LLM이 두 번 판단해 일치한 것이고 사람 검토는 아닙니다.
+
+### 7.3 폰 실측 — 2019년 폰에서
+
+Galaxy S10 5G(Android 12), release 빌드 기준입니다.
+
+| 항목 | 결과 |
+|---|---|
+| 모델 열기 | 1.3 ~ 1.4초 |
+| 처음 정리 409장 | 124초, **장당 0.30초** |
+| 다시 열기 414장 (저장한 결과 사용) | 0.1초 |
+| 문장 검색 한 번 | 0.14 ~ 0.38초 |
+| 비행기 모드 | 새로 찍은 사진 분류와 검색 모두 됨 |
+
+- 모델은 설치 파일에 넣지 않고 **처음 쓸 때 받습니다**(4개 파일 약 200MB). 받기 전에 모바일 데이터면 묻고, 받은 파일은 크기로 확인합니다.
+- 비슷한 사진 묶기 기준값은 **0.92**로 정했습니다. 같은 사진은 99.1% 묶고, 다른 사진이 잘못 묶이는 쌍은 1만 쌍에 0.46쌍입니다.
+- 검색은 처음에 비슷한 순서로 60장을 채워 '바다'에 메뉴판이 섞였습니다. **1위 점수의 75%보다 낮은 사진을 빼도록** 고쳐 바다 사진만 남겼습니다.
+- 사진 분류를 끈 사용자는 폰 정리를 시작하지 않습니다. 올린 사진의 결과만 서버에 보냅니다.
+
+근거: [`ai/docs/reports/ondevice-photo-ai.md`](ai/docs/reports/ondevice-photo-ai.md)
+
+### 7.4 Galaxy S22에서 990~1,000장 검색 준비 시간을 재다
+
+기존 임베딩 캐시가 앱 재진입에 얼마나 도움이 되는지 확인했습니다. Galaxy S22(Android 16) 개발 빌드에 모델과 여행 기간, 사진 권한을 미리 설정한 뒤, 정리 버튼을 누른 시점부터 모든 대상 사진의 검색 준비가 끝날 때까지 쟀습니다. 60장 합성 원본으로 만든 테스트 사진을 사용했고 각 조건은 한 번씩 실행했습니다.
+
+| 조건 | 인덱싱 사진 | 신규 인코딩 / 캐시 재사용 | 검색 준비 |
+|---|---:|---:|---:|
+| 캐시를 비우고 처음 열기 | 990장 | 990 / 0 | **319.02초** |
+| 캐시를 남기고 앱을 강제 종료한 뒤 다시 열기 | 990장 | 0 / 990 | **20.65초** |
+| 사진 10장을 추가하고 다시 열기 | 1,000장 | 10 / 990 | **17.63초** |
+
+- 첫 정리와 재진입에서 `비빔밥`의 검색 결과 19개는 순서와 점수가 모두 같았습니다. 사진을 10장 추가한 뒤 `카드키`를 검색하자 새 사진이 1위에 나왔습니다.
+- 캐시가 있어도 비슷한 사진을 다시 묶는 데 시간이 걸렸습니다. 완전히 동일한 임베딩 쌍의 유사도 판정을 재사용해, 같은 테스트 사진 1,000장에서 **묶기 단계**가 **13.27초 → 0.23초**로 줄었습니다. 반복 원본이 있는 합성 앨범에서 관측한 수치입니다.
+- 준비를 마친 앱에서 비행기 모드로 전환해 한국어 검색 결과가 표시되는 것도 확인했습니다. 이 빌드에서 여행 앨범에 인덱싱된 최대 규모는 1,000장입니다.
+
+[‘단풍’ 한국어 검색 실기기 영상](portfolio-verification/android-cache/real-device/eodi-autumn-search.mp4) · [실기기 결과 화면](portfolio-verification/android-cache/real-device/eodi-autumn-result.png) · [측정 보고서](portfolio-verification/android-cache/real-device/REPORT.md) · [인덱싱 원시값](portfolio-verification/android-cache/real-device/large-index-runs.csv) · [질의별 결과](portfolio-verification/android-cache/real-device/large-query-ranks.csv)
+
+## 8. 장소 찾기 AI — 지어내지 않는 것이 먼저
+
+링크, 메모, 앱 화면 캡처에서 장소 이름을 찾아 네이버 지역 검색으로 위치를 맞춥니다. 사용자가 고른 것만 저장합니다.
+
+### 8.1 평가
+
+평가 세트를 먼저 정하고 실제 모델로 두 번씩 돌렸습니다.
+
+| 기능 | 입력 | 결과 | 기준 |
+|---|---|---|---|
+| 링크 · 메모 | 17건 × 2회 | **17/17, 17/17** | 명세 통과 |
+| 앱 화면 캡처 (지도앱, 블로그, SNS, 채팅) | 합성 50장 × 2회 | 재현율 **92.0%, 95.4%** · 장소 없는 캡처 6/6 | 85% 이상 |
+| 캡처 지연 | 50장 | 중앙값 2.6초 · p90 3.4 ~ 3.7초 | - |
+| 업로드 사진 주제 분류 (서버) | 77장 | **98.7%** (76/77) · 묶음 F1 0.980 | 90% 이상 |
+
+### 8.2 찾은 문제와 고친 것
+
+| 문제 | 원인 | 대응 |
+|---|---|---|
+| 광고에 나온 숙박업소를 장소로 냄 (2/2회) | 화면에 보이는 모든 상호를 후보로 봄 | 광고 영역 규칙 추가 → 재평가 2회 모두 안 냄 |
+| 지운 '선크림'이 '자외선 차단제'로 다시 제안됨 | 같은 뜻 다른 말을 못 거름 | 지운 항목과 뜻이 같은 것도 제외 → 2/2회 통과 |
+| LLM 장애 때 링크 제목이 장소 후보로 나옴 | 장애 시 대체 경로가 제목을 그대로 씀 | 대체 경로 수정, 단위 테스트로 고정 |
+| 정확한 이름이 검색 5번째에 있어 잘림 | 검색 결과 앞쪽만 봄 | 5건을 받아 이름 일치로 다시 정렬 |
+| 호텔 객실, 박물관 실내가 '풍경'으로 분류 | 실내 주제가 없음 | 실내는 '기타'로 → 76/77 |
+
+> 평가 세트가 작습니다(기능당 17 ~ 92건). 몇 건 차이는 우열의 근거로 삼지 않습니다. 캡처는 직접 만든 합성 화면이고, 실제 사용자 캡처로 다시 재는 것이 남은 일입니다.
+
+근거: [`ai/docs/reports/`](ai/docs/reports)
+
+## 9. 함께 쓰는 여행 — 덮어쓰지 않고, 두 번 처리하지 않는다
+
+여럿이 같은 여행을 고치는 앱이라 **동시에 고친 것**과 **같은 요청이 두 번 온 것**을 먼저 다뤘습니다.
+
+### 9.1 버전으로 덮어쓰기를 막는다
+
+코스, 투표, 경비, 정산, 설정처럼 함께 고치는 데이터는 저장할 때 `expectedVersion`을 보냅니다. 그사이 다른 사람이 저장했으면 서버는 덮어쓰지 않고 `409 VERSION_CONFLICT`를 돌려줍니다.
+
+### 9.2 코스는 날짜 단위로 합친다
+
+409를 받으면 앱이 최신 코스를 받아, **편집을 시작한 코스 / 내 초안 / 최신 코스** 셋을 일차 단위로 비교합니다.
+
+| 상황 | 앱의 처리 |
+|---|---|
+| 서로 **다른 날**을 고쳤다 | 최신 코스에 내 날을 다시 얹고 알린다. 확인하고 저장하면 끝 |
+| 내가 고친 게 없다 | 최신 코스로 조용히 바꾼다 |
+| **같은 날**을 고쳤다 | "내 것으로 덮기 / 최신 코스 보기"를 묻는다. 덮어도 내가 고친 날만 덮는다 |
+
+연결이 끊겼다 붙어도 같은 비교를 합니다. 저장하는 중이면 저장 결과(409)가 같은 비교를 하므로 건너뜁니다.
+
+### 9.3 같은 요청은 한 번만
+
+- **멱등 키**: 여행 만들기, 장소 찾기, 추천 요청처럼 다시 눌러도 하나만 생겨야 하는 요청은 `Idempotency-Key`를 보냅니다. 응답을 못 받고 다시 눌러도 같은 키로 보내 결과가 하나입니다.
+- **채팅**: 메시지마다 앱이 만든 `clientMessageId`를 보내 재전송이 중복으로 쌓이지 않습니다. 방마다 `sequence`로 순서를 매기고, 다시 연결되면 **구독을 먼저 하고** 마지막으로 본 `sequence`까지 REST로 채워 빈 구간이 없게 합니다.
+
+## 10. 비동기 작업 — PostgreSQL 하나로 만든 작업 큐
+
+장소 찾기, 추천, 코스 제안, 사진 분류처럼 수 초 ~ 수십 초 걸리는 AI 일은 바로 응답하지 않고 **작업(Job)으로 접수**합니다. 앱은 `202`와 작업 ID를 받고 진행 상태를 봅니다. 별도 메시지 큐 없이 DB 하나로 만들었습니다.
+
+```mermaid
+flowchart LR
+    A["앱 요청"] --> B["도메인 변경 + 작업 QUEUED<br/>같은 트랜잭션으로 커밋"]
+    B --> C["실행기: FOR UPDATE SKIP LOCKED<br/>한 번에 하나 선점 + 임대"]
+    C --> D["AI 서버 호출<br/>작업 ID = 외부 멱등 키"]
+    D --> E["결과 저장 + 도메인 반영<br/>임대가 유효할 때만"]
+    E --> F["앱: 상태 조회 · 알림"]
+    C -. "임대 만료(서버 재시작 등)" .-> C
 ```
 
-| 구성 요소 | 실행 및 테스트 |
-| --- | --- |
-| `EodiLog/` | Java 25와 Docker를 준비하고 `.env.example`을 참고해 설정합니다. `docker compose up -d`로 DB를 띄운 뒤 `./gradlew bootRun --args='--spring.profiles.active=local'`로 실행합니다. 테스트는 `./gradlew build`입니다. |
-| `ai/` | Python 3.11과 uv를 준비하고 `.env.example`을 참고해 설정합니다. `uv sync --group dev` 후 `uv run uvicorn app.main:app --reload`로 실행합니다. 테스트는 `uv run pytest`입니다. |
-| `frontend/` | `npm test`, `npm run typecheck`, `npm run lint`로 검사합니다. |
-| `deploy/` | 컨테이너와 서비스 환경 설정은 [배포 문서](deploy/README.md)를 참고합니다. |
+| 위험 | 장치 |
+|---|---|
+| 요청은 저장됐는데 작업이 안 생김 | 작업 등록은 **호출한 도메인의 트랜잭션 안에서만** 가능하게 강제. 함께 커밋되고 함께 롤백 |
+| 서버 두 대가 같은 작업을 잡음 | `FOR UPDATE SKIP LOCKED`로 하나씩 선점, 실행마다 임대 |
+| 배포 중 실행이 끊김 | 실패로 확정하지 않고 남겨 두면 임대가 끝난 뒤 다른 실행기가 다시 잡음 |
+| 다시 실행되어 외부 호출이 두 번 | 실행은 at-least-once. **작업 ID를 외부 공급자의 멱등 키**로 써서 중복을 막음 |
+| 늦게 끝난 옛 실행이 결과를 덮음 | 결과 반영 전에 실행 ID와 임대 유효를 확인하고 작업 행을 잠금 |
+| 다른 사람 작업 결과가 보임 | 종류마다 접수·실행·완료·조회 네 단계 권한 정책과 공개할 결과 필드 목록을 필수로 등록 |
 
-## 팀
+근거: [`EodiLog/docs/plan/jobs-foundation.md`](EodiLog/docs/plan/jobs-foundation.md)
 
-| 장수철 | 전성환 | 황승기 | 정인경 | 박세은 | 윤영광 |
-| --- | --- | --- | --- | --- | --- |
-| AI | 백엔드 | 백엔드·인프라 | 프론트엔드 | 프론트엔드 | 프론트엔드 |
+## 11. 배포 — 끊김 없이 바꾸고, 바로 되돌린다
+
+dev에 병합되면 Jenkins가 백엔드 서버의 [`deploy/deploy.sh`](deploy/deploy.sh)를 실행합니다.
+
+| 단계 | 하는 일 |
+|---|---|
+| 바뀐 것만 | dev로 맞춘 뒤 바뀐 서비스(백엔드 / AI / nginx)만 이미지를 빌드 |
+| DB 백업 | **새 마이그레이션이 있을 때만** 교체 전에 DB를 백업 |
+| 백엔드 교체 | **새 컨테이너를 먼저 띄우고 준비되면 옛 것을 내림.** 새 것이 못 뜨면 옛 것이 계속 서비스하고 배포는 실패로 끝남 |
+| AI 교체 | 모델을 올리는 30 ~ 40초 동안 AI 기능만 실패하고, 비동기 작업은 백엔드가 다시 시도 |
+| 되돌리기 | 이미지에 `latest`(방금 빌드) · `live`(지금 서비스) · `previous`(그 전) 이름표를 붙여 `deploy.sh rollback` 한 줄로 직전 이미지로 |
+
+- 백엔드 서버는 ARM64입니다. x86 노트북에서 만든 이미지는 돌지 않아 서버에서 직접 빌드합니다. PostGIS도 ARM용 이미지를 씁니다.
+- 백엔드 서버에서 밖으로 열린 포트는 443 하나이고, 앞단 서버에서 오는 요청만 받습니다.
+- 사진 HEIC 변환을 위해 백엔드 이미지에 ImageMagick 7을 넣고, **빌드 중에 실제 HEIC 변환이 되는지 확인**합니다.
+
+## 12. Testing
+
+| 영역 | 방법 |
+|---|---|
+| 백엔드 (`EodiLog/`) | `./gradlew build` : JUnit 5 테스트 파일 109개. **Testcontainers로 실제 PostgreSQL + PostGIS를 띄워** 통합 테스트 |
+| 앱 (`frontend/`) | `npm test` (Jest + React Native Testing Library, 테스트 파일 176개) · `npm run typecheck` · `npm run lint` |
+| AI 서버 (`ai/`) | `uv run pytest` (테스트 파일 28개) |
+| AI 품질 | `ai/eval_data/`의 평가 세트로 기능마다 실제 모델을 돌려 기준과 비교 ([`ai/docs/reports/`](ai/docs/reports)) |
+| 서버 없이 화면 | 앱 안의 가짜 서버(`EXPO_PUBLIC_DEV_MOCK=true`)로 백엔드 없이 대부분의 화면과 흐름을 확인 |
+| Android 사진 검색 실기기 | Galaxy S22에서 최초 인덱싱, 캐시 재진입, 사진 추가, 오프라인 검색을 확인했습니다. [실측 환경과 원시값](portfolio-verification/android-cache/real-device/REPORT.md) |
+| 앱 사진 검색 회귀 테스트 | 사진 검색 규칙과 모델 명세 Jest 테스트 2개 스위트, 21개 통과. |
+
+## 13. Contributors
+
+| **👑장수철** | **전성환** | **황승기** | **정인경** | **박세은** | **윤영광** |
+|:---:|:---:|:---:|:---:|:---:|:---:|
+| **AI** | **Backend** | **Backend / Infra** | **Frontend** | **Frontend** | **Frontend** |
